@@ -1,6 +1,7 @@
 using System;
 using System.CommandLine;
 using System.Text.Json;
+using SnoopWpfCLI.Formatters;
 using SnoopWpfCLI.Services;
 
 namespace SnoopWpfCLI.Commands;
@@ -15,6 +16,13 @@ public static class ListProcessesCommand
             DefaultValueFactory = _ => true
         };
 
+        var formatOption = new Option<string>("--format")
+        {
+            Description = "Output format: json or tree",
+            DefaultValueFactory = _ => "json"
+        };
+        formatOption.AcceptOnlyFromAmong("json", "tree");
+
         var verboseOption = new Option<bool>("--verbose")
         {
             Description = "Enable verbose output"
@@ -22,10 +30,12 @@ public static class ListProcessesCommand
 
         var command = new Command("list-processes", "List running WPF processes");
         command.Options.Add(jsonOption);
+        command.Options.Add(formatOption);
         command.Options.Add(verboseOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
+            var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
             var service = new WpfProcessService(verbose);
 
@@ -40,15 +50,24 @@ public static class ListProcessesCommand
                     processes = processes
                 };
 
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                Console.WriteLine(JsonSerializer.Serialize(output, options));
-                return 0;
+                if (format == "tree")
+                {
+                    var jsonStr = JsonSerializer.Serialize(processes);
+                    var element = JsonDocument.Parse(jsonStr).RootElement;
+                    Console.WriteLine(TreeFormatter.FormatProcessList(element));
+                }
+                else
+                {
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    Console.WriteLine(JsonSerializer.Serialize(output, options));
+                }
+                return ExitCodes.Success;
             }
             catch (Exception ex)
             {
                 var error = new { success = false, error = ex.Message };
                 Console.Error.WriteLine(JsonSerializer.Serialize(error));
-                return 1;
+                return ExitCodes.GeneralError;
             }
         });
 

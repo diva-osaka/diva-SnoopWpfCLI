@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.CommandLine;
 using System.Text.Json;
+using System.Threading.Tasks;
+using SnoopWpfCLI.Formatters;
 using SnoopWpfCLI.Services;
 
 namespace SnoopWpfCLI.Commands;
@@ -21,6 +23,13 @@ public static class ScreenshotCommand
             Description = "Output file path (PNG). If omitted, outputs base64 JSON."
         };
 
+        var formatOption = new Option<string>("--format")
+        {
+            Description = "Output format: json or tree",
+            DefaultValueFactory = _ => "json"
+        };
+        formatOption.AcceptOnlyFromAmong("json", "tree");
+
         var verboseOption = new Option<bool>("--verbose")
         {
             Description = "Enable verbose output"
@@ -29,12 +38,14 @@ public static class ScreenshotCommand
         var command = new Command("screenshot", "Take a WPF screenshot");
         command.Options.Add(pidOption);
         command.Options.Add(outputOption);
+        command.Options.Add(formatOption);
         command.Options.Add(verboseOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var pid = parseResult.GetValue(pidOption);
             var outputPath = parseResult.GetValue(outputOption);
+            var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
             var service = new InjectionService(verbose);
 
@@ -60,22 +71,48 @@ public static class ScreenshotCommand
                         format = result.Format
                     };
 
-                    var options = new JsonSerializerOptions { WriteIndented = true };
-                    Console.WriteLine(JsonSerializer.Serialize(fileResult, options));
+                    if (format == "tree")
+                    {
+                        var jsonStr = JsonSerializer.Serialize(fileResult);
+                        var element = JsonDocument.Parse(jsonStr).RootElement;
+                        Console.WriteLine(TreeFormatter.FormatGenericResult(element));
+                    }
+                    else
+                    {
+                        var options = new JsonSerializerOptions { WriteIndented = true };
+                        Console.WriteLine(JsonSerializer.Serialize(fileResult, options));
+                    }
                 }
                 else
                 {
-                    var options = new JsonSerializerOptions { WriteIndented = true };
-                    Console.WriteLine(JsonSerializer.Serialize(result, options));
+                    if (format == "tree")
+                    {
+                        var jsonStr = JsonSerializer.Serialize(result);
+                        var element = JsonDocument.Parse(jsonStr).RootElement;
+                        Console.WriteLine(TreeFormatter.FormatGenericResult(element));
+                    }
+                    else
+                    {
+                        var options = new JsonSerializerOptions { WriteIndented = true };
+                        Console.WriteLine(JsonSerializer.Serialize(result, options));
+                    }
                 }
 
-                return result.Success ? 0 : 3;
+                if (result.Success)
+                    return ExitCodes.Success;
+                return result.Error == "Process not found" ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+            }
+            catch (Exception ex) when (ex is TimeoutException or OperationCanceledException or TaskCanceledException)
+            {
+                var error = new { success = false, processId = pid, error = ex.Message };
+                Console.Error.WriteLine(JsonSerializer.Serialize(error));
+                return ExitCodes.Timeout;
             }
             catch (Exception ex)
             {
                 var error = new { success = false, processId = pid, error = ex.Message };
                 Console.Error.WriteLine(JsonSerializer.Serialize(error));
-                return 1;
+                return ExitCodes.GeneralError;
             }
         });
 
