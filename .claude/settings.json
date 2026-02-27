@@ -1,0 +1,68 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Skill(superpowers:brainstorming)",
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Skill(superpowers:executing-plans)",
+      "Bash(where *)",
+      "Bash(psql *)",
+      "Bash(npm run *)",
+      "Bash(git checkout *)",
+      "Bash(git pull *)",
+      "Bash(git status *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(gh pr checks *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr create *)",
+      "Bash(gh api *)",
+      "Bash(docker compose *)",
+      "Bash(npx prisma *)",
+      "Bash(npx biome *)",
+      "Bash(npx vitest *)",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Bash(npx tsx *)",
+      "Bash(npx vercel *)",
+      "Bash(npx sentry-cli *)",
+      "Bash(npx playwright-cli *)",
+      "Bash(dir *)",
+      "Bash(echo *)",
+      "Bash(cd *)",
+      "Bash(ls *)",
+      "Bash(netstat *)",
+      "Bash(findstr *)",
+      "Bash(tasklist *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(ping *)",
+      "Bash(mkdir *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(chmod 777 *)",
+      "Bash(chown *)",
+      "Bash(mkfs *)",
+      "Bash(dd *)",
+      "Bash(curl *|bash*)",
+      "Bash(wget *|bash*)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(prisma reset *)",
+      "Bash(docker *)",
+      "Bash(kubectl *)"
+    ]
+  },
+  "enabledPlugins": {
+    "security-guidance@claude-plugins-official": true
+  },
+  "plansDirectory": "./docs/plans"
+}
