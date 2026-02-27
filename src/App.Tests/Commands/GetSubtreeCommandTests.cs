@@ -1,0 +1,59 @@
+using System.CommandLine;
+using System.CommandLine.Parsing;
+using System.Linq;
+using SnoopWpfCLI.Commands;
+using Xunit;
+
+namespace SnoopWpfCLI.Tests.Commands;
+
+public class GetSubtreeCommandTests
+{
+    [Fact]
+    public void Command_HasCorrectName()
+    {
+        var command = GetSubtreeCommand.Create();
+        Assert.Equal("get-subtree", command.Name);
+    }
+
+    [Fact]
+    public void Command_HasRequiredOptions()
+    {
+        var command = GetSubtreeCommand.Create();
+        Assert.NotNull(command.Options.FirstOrDefault(o => o.Name == "--pid"));
+        Assert.NotNull(command.Options.FirstOrDefault(o => o.Name == "--type"));
+        Assert.NotNull(command.Options.FirstOrDefault(o => o.Name == "--hash"));
+    }
+
+    [Fact]
+    public void Parse_WithAllRequiredOptions_NoErrors()
+    {
+        var command = GetSubtreeCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("get-subtree --pid 1234 --type System.Windows.Controls.Button --hash 5678");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
+    [Fact]
+    public void Parse_MissingType_HasErrors()
+    {
+        var command = GetSubtreeCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("get-subtree --pid 1234 --hash 5678");
+        Assert.True(result.Errors.Count > 0);
+    }
+
+    [Fact]
+    public void Parse_MissingHash_HasErrors()
+    {
+        var command = GetSubtreeCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("get-subtree --pid 1234 --type System.Windows.Controls.Button");
+        Assert.True(result.Errors.Count > 0);
+    }
+}

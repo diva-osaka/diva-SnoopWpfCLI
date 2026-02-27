@@ -19,4 +19,18 @@
     <ProjectReference Include="..\..\snoopwpf\Snoop.InjectorLauncher\Snoop.InjectorLauncher.csproj" />
   </ItemGroup>
 
+  <!-- Copy x64 and ARM64 InjectorLauncher executables to output directory -->
+  <Target Name="CopyInjectorLaunchers" AfterTargets="Build">
+    <PropertyGroup>
+      <InjectorOutputDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\..\snoopwpf\bin\$(Configuration)'))</InjectorOutputDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <InjectorFiles Include="$(InjectorOutputDir)\Snoop.InjectorLauncher.x64.*" />
+      <InjectorFiles Include="$(InjectorOutputDir)\Snoop.InjectorLauncher.ARM64.*" />
+      <InjectorFiles Include="$(InjectorOutputDir)\Snoop.GenericInjector.x64.dll" />
+      <InjectorFiles Include="$(InjectorOutputDir)\Snoop.GenericInjector.x86.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(InjectorFiles)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(InjectorFiles)' != ''" />
+  </Target>
+
 </Project>
