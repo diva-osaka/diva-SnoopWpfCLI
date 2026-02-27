@@ -7,6 +7,8 @@ namespace SnoopWpfCLI.Formatters;
 
 public static class TreeFormatter
 {
+    private const string ColumnSeparator = "  ";
+
     private static readonly HashSet<string> KeyProperties = new(StringComparer.OrdinalIgnoreCase)
     {
         "Name", "Content", "Text", "Title", "Header", "Source", "CommandParameter"
@@ -14,7 +16,12 @@ public static class TreeFormatter
 
     public static string FormatVisualTree(JsonElement element)
     {
-        if (element.ValueKind == JsonValueKind.Object && !element.TryGetProperty("type", out _))
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return "(empty tree)";
+        }
+
+        if (!element.TryGetProperty("type", out _))
         {
             return "(empty tree)";
         }
@@ -50,9 +57,9 @@ public static class TreeFormatter
         }
 
         // Header
-        sb.Append($"{"PID".PadRight(pidWidth)}  {"Name".PadRight(nameWidth)}  {"Window Title".PadRight(titleWidth)}");
+        sb.Append($"{"PID".PadRight(pidWidth)}{ColumnSeparator}{"Name".PadRight(nameWidth)}{ColumnSeparator}{"Window Title".PadRight(titleWidth)}");
         sb.Append('\n');
-        sb.Append(new string('-', pidWidth + nameWidth + titleWidth + 4));
+        sb.Append(new string('-', pidWidth + nameWidth + titleWidth + ColumnSeparator.Length * 2));
         sb.Append('\n');
 
         // Rows
@@ -62,7 +69,7 @@ public static class TreeFormatter
             var name = proc.TryGetProperty("processName", out var nameProp) ? nameProp.GetString() ?? "" : "";
             var title = proc.TryGetProperty("mainWindowTitle", out var titleProp) ? titleProp.GetString() ?? "" : "";
 
-            sb.Append($"{pid.PadRight(pidWidth)}  {name.PadRight(nameWidth)}  {title}");
+            sb.Append($"{pid.PadRight(pidWidth)}{ColumnSeparator}{name.PadRight(nameWidth)}{ColumnSeparator}{title}");
             sb.Append('\n');
         }
 

@@ -329,6 +329,61 @@ public class TreeFormatterTests
     }
 
     [Fact]
+    public void FormatVisualTree_ArrayInput_ReturnsEmptyMessage()
+    {
+        var json = "[1, 2, 3]";
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatVisualTree(element);
+
+        Assert.Equal("(empty tree)", result);
+    }
+
+    [Fact]
+    public void FormatVisualTree_StringInput_ReturnsEmptyMessage()
+    {
+        var json = "\"hello\"";
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatVisualTree(element);
+
+        Assert.Equal("(empty tree)", result);
+    }
+
+    [Fact]
+    public void FormatVisualTree_NumberInput_ReturnsEmptyMessage()
+    {
+        var json = "42";
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatVisualTree(element);
+
+        Assert.Equal("(empty tree)", result);
+    }
+
+    [Fact]
+    public void FormatVisualTree_NullInput_ReturnsEmptyMessage()
+    {
+        var json = "null";
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatVisualTree(element);
+
+        Assert.Equal("(empty tree)", result);
+    }
+
+    [Fact]
+    public void FormatVisualTree_BooleanInput_ReturnsEmptyMessage()
+    {
+        var json = "true";
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatVisualTree(element);
+
+        Assert.Equal("(empty tree)", result);
+    }
+
+    [Fact]
     public void FormatVisualTree_NodeWithNameProperty_ShowsName()
     {
         var json = """

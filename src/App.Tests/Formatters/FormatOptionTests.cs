@@ -29,8 +29,12 @@ public class FormatOptionTests
         var root = new RootCommand();
         root.Subcommands.Add(command);
 
-        var formatOption = command.Options.FirstOrDefault(o => o.Name == "--format");
-        Assert.NotNull(formatOption);
+        var result = root.Parse("list-processes");
+        Assert.Equal(0, result.Errors.Count);
+
+        var formatOption = command.Options.OfType<Option<string>>().First(o => o.Name == "--format");
+        var value = result.GetValue(formatOption);
+        Assert.Equal("json", value);
     }
 
     [Fact]

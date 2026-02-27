@@ -22,7 +22,7 @@
 ## Installation
 
 ```bash
-git clone --recursive https://github.com/aoyagi/SnoopWpfCLI.git
+git clone --recursive https://github.com/diva-osaka/diva-SnoopWpfCLI.git
 cd SnoopWpfCLI
 dotnet build src/SnoopWpfCLI.slnx
 ```
@@ -107,33 +107,33 @@ dotnet run --project src/App/App.csproj -- get-tree --pid 12345 --format tree
 
 ```
 Window "SnoopWpfCLI Test App"
-+-- Grid
-    +-- Border
-    |   +-- StackPanel
-    |       +-- TextBlock "SnoopWpfCLI Test Application"  [HeaderTitle]
-    |       +-- TextBlock  [ProcessInfoText]
-    +-- TabControl
-    |   +-- TabItem "Basic Controls"  [BasicControlsTab]
-    |   |   +-- ScrollViewer
-    |   |       +-- StackPanel
-    |   |           +-- GroupBox "Text Input"
-    |   |           |   +-- TextBox  [InputTextBox]
-    |   |           |   +-- TextBox  [MirrorTextBox]
-    |   |           +-- GroupBox "Buttons"
-    |   |           |   +-- Button "Click Me"  [CountButton]
-    |   |           |   +-- Button "Custom Template Button"  [CustomStyledButton]
-    |   |           +-- GroupBox "Toggle Controls"
-    |   |           |   +-- CheckBox "Bound CheckBox"  [BoundCheckBox]
-    |   |           |   +-- CheckBox "Three-State CheckBox"  [ThreeStateCheckBox]
-    |   |           |   +-- ToggleButton "Toggle Button"  [TestToggleButton]
-    |   |           +-- GroupBox "Range Controls"
-    |   |               +-- Slider  [TestSlider]
-    |   |               +-- ProgressBar  [TestProgressBar]
-    |   +-- TabItem "Selection Controls"  [SelectionTab]
-    |   +-- TabItem "Nested Structure"  [NestedTab]
-    |   +-- TabItem "Template Test"  [TemplateTab]
-    +-- StatusBar
-        +-- TextBlock  [StatusText]
+└─ Grid
+   ├─ Border
+   │  └─ StackPanel
+   │     ├─ TextBlock "SnoopWpfCLI Test Application"  [HeaderTitle]
+   │     └─ TextBlock  [ProcessInfoText]
+   ├─ TabControl
+   │  ├─ TabItem "Basic Controls"  [BasicControlsTab]
+   │  │  └─ ScrollViewer
+   │  │     └─ StackPanel
+   │  │        ├─ GroupBox "Text Input"
+   │  │        │  ├─ TextBox  [InputTextBox]
+   │  │        │  └─ TextBox  [MirrorTextBox]
+   │  │        ├─ GroupBox "Buttons"
+   │  │        │  ├─ Button "Click Me"  [CountButton]
+   │  │        │  └─ Button "Custom Template Button"  [CustomStyledButton]
+   │  │        ├─ GroupBox "Toggle Controls"
+   │  │        │  ├─ CheckBox "Bound CheckBox"  [BoundCheckBox]
+   │  │        │  ├─ CheckBox "Three-State CheckBox"  [ThreeStateCheckBox]
+   │  │        │  └─ ToggleButton "Toggle Button"  [TestToggleButton]
+   │  │        └─ GroupBox "Range Controls"
+   │  │           ├─ Slider  [TestSlider]
+   │  │           └─ ProgressBar  [TestProgressBar]
+   │  ├─ TabItem "Selection Controls"  [SelectionTab]
+   │  ├─ TabItem "Nested Structure"  [NestedTab]
+   │  └─ TabItem "Template Test"  [TemplateTab]
+   └─ StatusBar
+      └─ TextBlock  [StatusText]
 ```
 
 ### 6. Get a specific element
@@ -211,12 +211,13 @@ dotnet run --project src/App/App.csproj -- screenshot --pid 12345 \
 List running WPF processes.
 
 ```bash
-snoopwpf list-processes [--json] [--verbose]
+snoopwpf list-processes [--json] [--format json|tree] [--verbose]
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--json` | `true` | Output as JSON |
+| `--format` | `json` | Output format: `json` or `tree` |
 | `--verbose` | `false` | Enable verbose output |
 
 ### ping

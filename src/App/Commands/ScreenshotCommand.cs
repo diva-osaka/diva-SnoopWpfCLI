@@ -100,7 +100,7 @@ public static class ScreenshotCommand
 
                 if (result.Success)
                     return ExitCodes.Success;
-                return result.Error == "Process not found" ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+                return result.Error == ErrorMessages.ProcessNotFound ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
             }
             catch (Exception ex) when (ex is TimeoutException or OperationCanceledException or TaskCanceledException)
             {
