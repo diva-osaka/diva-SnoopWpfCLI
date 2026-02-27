@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/SnoopWpfSubModule/">
+    <Project Path="../snoopwpf/Snoop.InjectorLauncher/Snoop.InjectorLauncher.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="../tests/TestApp/TestApp.csproj" />
+  </Folder>
+  <Project Path="App/App.csproj" />
+  <Project Path="WpfInspector/WpfInspector.csproj" />
+  <Project Path="App.Tests/App.Tests.csproj" />
+</Solution>

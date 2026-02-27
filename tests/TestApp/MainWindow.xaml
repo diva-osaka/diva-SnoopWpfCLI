@@ -1,0 +1,377 @@
+<Window x:Class="TestApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:TestApp.ViewModels"
+        Title="SnoopWpfCLI Test App" Height="700" Width="900">
+
+    <Window.Resources>
+        <!-- ==============================================
+             DataTemplate for PersonItem
+             - DataTemplate内のUI要素はVisual Treeに存在するが
+               LogicalTreeHelper.GetChildrenでは取得できない
+             ============================================== -->
+        <DataTemplate x:Key="PersonItemTemplate" DataType="{x:Type local:PersonItem}">
+            <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="8" Margin="2">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="Bold" Margin="0,0,10,0"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Role}" Foreground="DarkBlue"/>
+                    <TextBlock Grid.Column="2" Text="{Binding Age, StringFormat='Age: {0}'}" Foreground="Gray"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- ==============================================
+             DataTemplate for TodoItem (CheckBox inside)
+             - テンプレート問題再現: CheckBox内部のVisual Tree要素が
+               LogicalTreeHelperでは見えない
+             ============================================== -->
+        <DataTemplate x:Key="TodoItemTemplate" DataType="{x:Type local:TodoItem}">
+            <StackPanel Orientation="Horizontal" Margin="4">
+                <CheckBox IsChecked="{Binding IsCompleted}" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Title}" Margin="8,0,0,0" VerticalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                    <Setter Property="TextDecorations" Value="Strikethrough"/>
+                                    <Setter Property="Foreground" Value="Gray"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- ==============================================
+             ControlTemplate for custom styled Button
+             - ControlTemplate内のBorder/ContentPresenterは
+               Visual Treeにのみ存在する
+             ============================================== -->
+        <Style x:Key="CustomButtonStyle" TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="CustomBorder"
+                                Background="#4CAF50"
+                                BorderBrush="#388E3C"
+                                BorderThickness="2"
+                                CornerRadius="6"
+                                Padding="12,6">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CustomBorder" Property="Background" Value="#66BB6A"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="CustomBorder" Property="Background" Value="#2E7D32"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ===== Header ===== -->
+        <Border Grid.Row="0" Background="#1565C0" Padding="12">
+            <StackPanel>
+                <TextBlock x:Name="HeaderTitle"
+                           Text="SnoopWpfCLI Test Application"
+                           FontSize="20" FontWeight="Bold" Foreground="White"/>
+                <TextBlock x:Name="ProcessInfoText"
+                           Foreground="#BBDEFB" FontSize="12" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ===== Main Content (TabControl) ===== -->
+        <TabControl Grid.Row="1" Margin="8">
+
+            <!-- ===== Tab 1: Basic Controls ===== -->
+            <TabItem x:Name="BasicControlsTab" Header="Basic Controls">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="12">
+
+                        <!-- Section: Text Input -->
+                        <GroupBox Header="Text Input" Margin="0,0,0,12">
+                            <StackPanel Margin="8">
+                                <TextBlock Text="Input Text (bound to ViewModel):" Margin="0,0,0,4"/>
+                                <TextBox x:Name="InputTextBox"
+                                         Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,0,0,8"/>
+                                <TextBlock Text="Read-Only Mirror:"  Margin="0,0,0,4"/>
+                                <TextBox x:Name="MirrorTextBox"
+                                         Text="{Binding InputText, Mode=OneWay}"
+                                         IsReadOnly="True"
+                                         Background="#F5F5F5"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Section: Buttons -->
+                        <GroupBox Header="Buttons" Margin="0,0,0,12">
+                            <StackPanel Margin="8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="CountButton"
+                                            Grid.Column="0"
+                                            Content="Click Me"
+                                            Click="CountButton_Click"
+                                            Margin="0,0,4,0"/>
+                                    <Button x:Name="CustomStyledButton"
+                                            Grid.Column="1"
+                                            Content="Custom Template Button"
+                                            Style="{StaticResource CustomButtonStyle}"
+                                            Click="CountButton_Click"
+                                            Margin="4,0,4,0"/>
+                                    <TextBlock x:Name="ClickCountText"
+                                               Grid.Column="2"
+                                               Text="{Binding ClickCount, StringFormat='Clicks: {0}'}"
+                                               VerticalAlignment="Center"
+                                               Margin="8,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Section: Toggle Controls -->
+                        <GroupBox Header="Toggle Controls" Margin="0,0,0,12">
+                            <StackPanel Margin="8">
+                                <CheckBox x:Name="BoundCheckBox"
+                                          Content="Bound CheckBox"
+                                          IsChecked="{Binding IsChecked}"
+                                          Margin="0,0,0,8"/>
+                                <CheckBox x:Name="ThreeStateCheckBox"
+                                          Content="Three-State CheckBox"
+                                          IsThreeState="True"
+                                          Margin="0,0,0,8"/>
+                                <ToggleButton x:Name="TestToggleButton"
+                                              Content="Toggle Button"
+                                              Width="120" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Section: Range Controls -->
+                        <GroupBox Header="Range Controls" Margin="0,0,0,12">
+                            <StackPanel Margin="8">
+                                <TextBlock Text="{Binding SliderValue, StringFormat='Slider Value: {0:F1}'}" Margin="0,0,0,4"/>
+                                <Slider x:Name="TestSlider"
+                                        Minimum="0" Maximum="100"
+                                        Value="{Binding SliderValue}"
+                                        TickFrequency="10"
+                                        IsSnapToTickEnabled="True"
+                                        TickPlacement="BottomRight"/>
+                                <ProgressBar x:Name="TestProgressBar"
+                                             Height="20"
+                                             Value="{Binding SliderValue}"
+                                             Maximum="100"
+                                             Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ===== Tab 2: Selection Controls ===== -->
+            <TabItem x:Name="SelectionTab" Header="Selection Controls">
+                <Grid Margin="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- ComboBox -->
+                    <GroupBox Grid.Column="0" Grid.Row="0" Header="ComboBox (Bound)" Margin="0,0,4,8">
+                        <StackPanel Margin="8">
+                            <ComboBox x:Name="BoundComboBox"
+                                      ItemsSource="{Binding Categories}"
+                                      SelectedItem="{Binding SelectedCategory}"/>
+                            <TextBlock Text="{Binding SelectedCategory, StringFormat='Selected: {0}'}"
+                                       Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- Static ComboBox -->
+                    <GroupBox Grid.Column="1" Grid.Row="0" Header="ComboBox (Static)" Margin="4,0,0,8">
+                        <StackPanel Margin="8">
+                            <ComboBox x:Name="StaticComboBox">
+                                <ComboBoxItem Content="Option Alpha"/>
+                                <ComboBoxItem Content="Option Beta"/>
+                                <ComboBoxItem Content="Option Gamma"/>
+                            </ComboBox>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- ListBox with DataTemplate (Person list) -->
+                    <GroupBox Grid.Column="0" Grid.Row="1" Header="People (DataTemplate)" Margin="0,0,4,0">
+                        <ListBox x:Name="PeopleListBox"
+                                 ItemsSource="{Binding People}"
+                                 ItemTemplate="{StaticResource PersonItemTemplate}"/>
+                    </GroupBox>
+
+                    <!-- ListBox with DataTemplate (Todo list) -->
+                    <GroupBox Grid.Column="1" Grid.Row="1" Header="Todo Items (DataTemplate)" Margin="4,0,0,0">
+                        <ListBox x:Name="TodoListBox"
+                                 ItemsSource="{Binding TodoItems}"
+                                 ItemTemplate="{StaticResource TodoItemTemplate}"/>
+                    </GroupBox>
+                </Grid>
+            </TabItem>
+
+            <!-- ===== Tab 3: Nested Structure ===== -->
+            <TabItem x:Name="NestedTab" Header="Nested Structure">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="Deep Nesting Test (Grid > StackPanel > Border > ...)"
+                                   FontWeight="Bold" Margin="0,0,0,8"/>
+
+                        <!-- Deep nesting: Grid > StackPanel > Border > DockPanel > elements -->
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Left column: nested panels -->
+                            <StackPanel Grid.Column="0" Margin="0,0,4,0">
+                                <Border BorderBrush="#1565C0" BorderThickness="2" CornerRadius="4" Padding="8" Margin="0,0,0,8">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Top" Text="Level 1: Border > DockPanel" FontWeight="Bold"/>
+                                        <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                                            <Border Background="#E3F2FD" Padding="8" CornerRadius="2">
+                                                <StackPanel>
+                                                    <TextBlock Text="Level 2: Nested Border > StackPanel"/>
+                                                    <Button x:Name="NestedButton1" Content="Nested Button 1" Margin="0,4,0,0"/>
+                                                    <TextBox x:Name="NestedTextBox1" Text="Nested TextBox 1" Margin="0,4,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+
+                                <Border BorderBrush="#C62828" BorderThickness="2" CornerRadius="4" Padding="8">
+                                    <WrapPanel>
+                                        <TextBlock Text="WrapPanel contents: " FontWeight="Bold"/>
+                                        <Button x:Name="WrapButton1" Content="Wrap 1" Margin="4"/>
+                                        <Button x:Name="WrapButton2" Content="Wrap 2" Margin="4"/>
+                                        <Button x:Name="WrapButton3" Content="Wrap 3" Margin="4"/>
+                                        <CheckBox x:Name="WrapCheckBox" Content="Wrap Check" Margin="4"/>
+                                    </WrapPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Right column: TreeView with expand/collapse -->
+                            <GroupBox Grid.Column="1" Header="TreeView (ExpandCollapse)" Margin="4,0,0,0">
+                                <TreeView x:Name="TestTreeView">
+                                    <TreeViewItem Header="Root Node" IsExpanded="True">
+                                        <TreeViewItem Header="Child 1">
+                                            <TreeViewItem Header="Grandchild 1.1"/>
+                                            <TreeViewItem Header="Grandchild 1.2"/>
+                                        </TreeViewItem>
+                                        <TreeViewItem Header="Child 2" IsExpanded="True">
+                                            <TreeViewItem Header="Grandchild 2.1"/>
+                                        </TreeViewItem>
+                                        <TreeViewItem Header="Child 3"/>
+                                    </TreeViewItem>
+                                </TreeView>
+                            </GroupBox>
+                        </Grid>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ===== Tab 4: Template Test ===== -->
+            <TabItem x:Name="TemplateTab" Header="Template Test">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="12">
+                        <TextBlock Text="Template Boundary Test" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
+                        <TextBlock TextWrapping="Wrap" Margin="0,0,0,12"
+                                   Text="This tab contains controls with custom ControlTemplates and ContentControls to verify that visual tree traversal can penetrate template boundaries."/>
+
+                        <!-- ContentControl with DataTemplate -->
+                        <GroupBox Header="ContentControl + DataTemplate" Margin="0,0,0,12">
+                            <ContentControl x:Name="PersonContentControl"
+                                            Content="{Binding People[0]}"
+                                            ContentTemplate="{StaticResource PersonItemTemplate}"
+                                            Margin="8"/>
+                        </GroupBox>
+
+                        <!-- Button with custom ControlTemplate -->
+                        <GroupBox Header="Button with ControlTemplate" Margin="0,0,0,12">
+                            <StackPanel Margin="8">
+                                <Button x:Name="TemplateTestButton"
+                                        Style="{StaticResource CustomButtonStyle}"
+                                        Content="ControlTemplate Button"
+                                        Width="200" HorizontalAlignment="Left"/>
+                                <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="Gray"
+                                           Text="The Border and ContentPresenter inside this button's ControlTemplate exist only in the Visual Tree, not the Logical Tree."/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Expander (uses ControlTemplate internally) -->
+                        <GroupBox Header="Expander (Internal ControlTemplate)" Margin="0,0,0,12">
+                            <Expander x:Name="TestExpander" Header="Click to Expand" IsExpanded="True" Margin="8">
+                                <StackPanel>
+                                    <TextBlock Text="This content is inside an Expander."/>
+                                    <Button x:Name="ExpanderButton" Content="Button inside Expander" Margin="0,4,0,0"/>
+                                    <TextBox x:Name="ExpanderTextBox" Text="TextBox inside Expander" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Expander>
+                        </GroupBox>
+
+                        <!-- TabControl inside TabControl (nested templates) -->
+                        <GroupBox Header="Nested TabControl" Margin="0,0,0,12">
+                            <TabControl x:Name="InnerTabControl" Height="150" Margin="8">
+                                <TabItem Header="Inner Tab A">
+                                    <StackPanel Margin="8">
+                                        <TextBlock Text="Content of Inner Tab A"/>
+                                        <Button x:Name="InnerTabButton" Content="Inner Tab Button"/>
+                                    </StackPanel>
+                                </TabItem>
+                                <TabItem Header="Inner Tab B">
+                                    <TextBlock Text="Content of Inner Tab B" Margin="8"/>
+                                </TabItem>
+                            </TabControl>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+        </TabControl>
+
+        <!-- ===== Status Bar ===== -->
+        <StatusBar Grid.Row="2">
+            <StatusBarItem>
+                <TextBlock x:Name="StatusText" Text="{Binding StatusMessage}"/>
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>
