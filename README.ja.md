@@ -1,0 +1,414 @@
+# SnoopWpfCLI
+
+> Playwright-CLI for WPF -- 実行中のWPFアプリケーションをコマンドラインから検査・操作するツール
+
+[English](README.md) | [日本語](README.ja.md)
+
+## 機能
+
+- **list-processes** -- 実行中のWPFプロセスを検出・一覧表示
+- **ping** -- インスペクタDLLをインジェクションし、通信を確認
+- **get-tree** -- WPFウィンドウのビジュアルツリー全体を取得（JSON形式またはツリー形式）
+- **get-subtree** -- 指定した要素を起点としたサブツリーを取得
+- **get-element** -- 単一要素の詳細情報を取得
+- **invoke** -- UI Automationアクションを実行（ボタンクリック、テキスト入力、チェックボックス操作など）
+- **screenshot** -- WPFウィンドウのスクリーンショットを取得（ファイル保存またはbase64出力）
+
+## 前提条件
+
+- **.NET 10.0 SDK** 以降
+- **Windows 10 / 11**
+
+## インストール
+
+```bash
+git clone --recursive https://github.com/diva-osaka/diva-SnoopWpfCLI.git
+cd SnoopWpfCLI
+dotnet build src/SnoopWpfCLI.slnx
+```
+
+> `--recursive` フラグは、DLLインジェクションに使用する [SnoopWPF](https://github.com/snoopwpf/snoopwpf) サブモジュールの取得に必要です。
+
+## クイックスタート
+
+付属の **TestApp** を使って一通りのワークフローを体験できます。
+
+### 1. TestApp をビルド・起動
+
+```bash
+dotnet build tests/TestApp/TestApp.csproj
+dotnet run --project tests/TestApp/TestApp.csproj
+```
+
+TestApp のウィンドウが開きます。Basic Controls、Selection Controls、Nested Structure、Template Test の4つのタブがあります。
+
+### 2. WPFプロセスの一覧表示
+
+```bash
+dotnet run --project src/App/App.csproj -- list-processes
+```
+
+```json
+{
+  "success": true,
+  "count": 1,
+  "processes": [
+    {
+      "processId": 12345,
+      "processName": "TestApp",
+      "mainWindowTitle": "SnoopWpfCLI Test App",
+      "isWpfApplication": true,
+      "hasMainWindow": true
+    }
+  ]
+}
+```
+
+`processId` の値を以降のコマンドで使用します。
+
+### 3. Ping（インスペクタDLLのインジェクション）
+
+```bash
+dotnet run --project src/App/App.csproj -- ping --pid 12345
+```
+
+```json
+{
+  "success": true,
+  "processId": 12345,
+  "message": "Ping successful",
+  "wasAlreadyInjected": false
+}
+```
+
+### 4. ビジュアルツリーの取得（JSON形式）
+
+```bash
+dotnet run --project src/App/App.csproj -- get-tree --pid 12345
+```
+
+レスポンスの `visualTreeJson` にビジュアルツリー全体がネストされたJSON構造として格納されます。
+
+```json
+{
+  "success": true,
+  "processId": 12345,
+  "processName": "TestApp",
+  "windowTitle": "SnoopWpfCLI Test App",
+  "visualTreeJson": "{ ... ネストされたビジュアルツリー ... }"
+}
+```
+
+### 5. ビジュアルツリーの取得（ツリー形式）
+
+```bash
+dotnet run --project src/App/App.csproj -- get-tree --pid 12345 --format tree
+```
+
+```
+Window "SnoopWpfCLI Test App"
+└─ Grid
+   ├─ Border
+   │  └─ StackPanel
+   │     ├─ TextBlock "SnoopWpfCLI Test Application"  [HeaderTitle]
+   │     └─ TextBlock  [ProcessInfoText]
+   ├─ TabControl
+   │  ├─ TabItem "Basic Controls"  [BasicControlsTab]
+   │  │  └─ ScrollViewer
+   │  │     └─ StackPanel
+   │  │        ├─ GroupBox "Text Input"
+   │  │        │  ├─ TextBox  [InputTextBox]
+   │  │        │  └─ TextBox  [MirrorTextBox]
+   │  │        ├─ GroupBox "Buttons"
+   │  │        │  ├─ Button "Click Me"  [CountButton]
+   │  │        │  └─ Button "Custom Template Button"  [CustomStyledButton]
+   │  │        ├─ GroupBox "Toggle Controls"
+   │  │        │  ├─ CheckBox "Bound CheckBox"  [BoundCheckBox]
+   │  │        │  ├─ CheckBox "Three-State CheckBox"  [ThreeStateCheckBox]
+   │  │        │  └─ ToggleButton "Toggle Button"  [TestToggleButton]
+   │  │        └─ GroupBox "Range Controls"
+   │  │           ├─ Slider  [TestSlider]
+   │  │           └─ ProgressBar  [TestProgressBar]
+   │  ├─ TabItem "Selection Controls"  [SelectionTab]
+   │  ├─ TabItem "Nested Structure"  [NestedTab]
+   │  └─ TabItem "Template Test"  [TemplateTab]
+   └─ StatusBar
+      └─ TextBlock  [StatusText]
+```
+
+### 6. 特定要素の取得
+
+ツリー出力から要素を特定し（例: `CountButton`、型 `System.Windows.Controls.Button`、ハッシュコード `56789`）、詳細情報を取得します。
+
+```bash
+dotnet run --project src/App/App.csproj -- get-element --pid 12345 \
+    --type System.Windows.Controls.Button --hash 56789
+```
+
+```json
+{
+  "success": true,
+  "processId": 12345,
+  "type": "System.Windows.Controls.Button",
+  "hashcode": 56789,
+  "message": "Element retrieved successfully",
+  "element": {
+    "type": "System.Windows.Controls.Button",
+    "hashcode": 56789,
+    "name": "CountButton",
+    "content": "Click Me",
+    "automationPatterns": ["Invoke"]
+  }
+}
+```
+
+### 7. アクションの実行（ボタンクリック）
+
+```bash
+dotnet run --project src/App/App.csproj -- invoke --pid 12345 \
+    --type System.Windows.Controls.Button --hash 56789 \
+    --action Invoke_Invoke
+```
+
+```json
+{
+  "success": true,
+  "processId": 12345,
+  "type": "System.Windows.Controls.Button",
+  "hashcode": 56789,
+  "action": "Invoke_Invoke",
+  "message": "Action invoked successfully"
+}
+```
+
+TestApp のクリックカウンターが増加します。
+
+### 8. スクリーンショットの取得
+
+```bash
+dotnet run --project src/App/App.csproj -- screenshot --pid 12345 \
+    --output screenshot.png
+```
+
+```json
+{
+  "success": true,
+  "processId": 12345,
+  "processName": "TestApp",
+  "message": "Screenshot saved to screenshot.png",
+  "windowTitle": "SnoopWpfCLI Test App",
+  "width": 900,
+  "height": 700,
+  "filePath": "C:\\...\\screenshot.png",
+  "format": "PNG"
+}
+```
+
+## コマンドリファレンス
+
+### list-processes
+
+実行中のWPFプロセスを一覧表示します。
+
+```bash
+snoopwpf list-processes [--json] [--format json|tree] [--verbose]
+```
+
+| オプション | デフォルト | 説明 |
+|-----------|----------|------|
+| `--json` | `true` | JSON形式で出力 |
+| `--format` | `json` | 出力形式: `json` または `tree` |
+| `--verbose` | `false` | 詳細ログを出力 |
+
+### ping
+
+WPFプロセスにインスペクタDLLをインジェクションし、通信を確認します。
+
+```bash
+snoopwpf ping --pid <PID> [--verbose]
+```
+
+| オプション | 必須 | 説明 |
+|-----------|------|------|
+| `--pid` | はい | 対象プロセスID |
+| `--verbose` | いいえ | 詳細ログを出力 |
+
+### get-tree
+
+対象WPFウィンドウのビジュアルツリー全体を取得します。
+
+```bash
+snoopwpf get-tree --pid <PID> [--format tree] [--verbose]
+```
+
+| オプション | 必須 | 説明 |
+|-----------|------|------|
+| `--pid` | はい | 対象プロセスID |
+| `--format tree` | いいえ | JSON形式の代わりに人間可読のツリー形式で出力 |
+| `--verbose` | いいえ | 詳細ログを出力 |
+
+### get-subtree
+
+指定した要素を起点としたサブツリーを取得します。
+
+```bash
+snoopwpf get-subtree --pid <PID> --type <TYPE> --hash <HASHCODE> [--format tree] [--verbose]
+```
+
+| オプション | 必須 | 説明 |
+|-----------|------|------|
+| `--pid` | はい | 対象プロセスID |
+| `--type` | はい | 要素の完全修飾型名（例: `System.Windows.Controls.Button`） |
+| `--hash` | はい | 要素のハッシュコード |
+| `--format tree` | いいえ | 人間可読のツリー形式で出力 |
+| `--verbose` | いいえ | 詳細ログを出力 |
+
+### get-element
+
+単一要素の詳細情報を取得します。
+
+```bash
+snoopwpf get-element --pid <PID> --type <TYPE> --hash <HASHCODE> [--verbose]
+```
+
+| オプション | 必須 | 説明 |
+|-----------|------|------|
+| `--pid` | はい | 対象プロセスID |
+| `--type` | はい | 要素の完全修飾型名 |
+| `--hash` | はい | 要素のハッシュコード |
+| `--verbose` | いいえ | 詳細ログを出力 |
+
+### invoke
+
+要素に対してUI Automationアクションを実行します。
+
+```bash
+snoopwpf invoke --pid <PID> --type <TYPE> --hash <HASHCODE> --action <ACTION> [--params <JSON>] [--verbose]
+```
+
+| オプション | 必須 | 説明 |
+|-----------|------|------|
+| `--pid` | はい | 対象プロセスID |
+| `--type` | はい | 要素の完全修飾型名 |
+| `--hash` | はい | 要素のハッシュコード |
+| `--action` | はい | Automation Peerアクション名 |
+| `--params` | いいえ | 追加パラメータ（JSON文字列） |
+| `--verbose` | いいえ | 詳細ログを出力 |
+
+**サポートされるアクション:**
+
+| アクション | 説明 |
+|-----------|------|
+| `Invoke_Invoke` | ボタンをクリック |
+| `Value_Get` | 現在のテキスト値を取得 |
+| `Value_Set` | テキスト値を設定（`--params '{"value":"..."}'` が必要） |
+| `Toggle_Toggle` | チェックボックスやトグルボタンの切り替え |
+| `Toggle_Status` | 現在のトグル状態を取得 |
+| `SelectionItem_Select` | アイテムを選択 |
+| `SelectionItem_AddToSelection` | 選択に追加 |
+| `SelectionItem_RemoveFromSelection` | 選択から削除 |
+| `SelectionItem_Status` | 選択状態を取得 |
+| `ExpandCollapse_Expand` | ノードを展開 |
+| `ExpandCollapse_Collapse` | ノードを折りたたみ |
+| `ExpandCollapse_Toggle` | 展開/折りたたみを切り替え |
+| `ExpandCollapse_Status` | 展開/折りたたみ状態を取得 |
+| `RangeValue_Get` | 現在の範囲値を取得 |
+| `RangeValue_Set` | 範囲値を設定（`--params '{"value":...}'` が必要） |
+| `Scroll_Status` | スクロール位置を取得 |
+| `Scroll_Scroll` | スクロール量を指定してスクロール |
+| `Scroll_SetPosition` | スクロール位置を絶対値で設定 |
+
+### screenshot
+
+WPFウィンドウのスクリーンショットを取得します。
+
+```bash
+snoopwpf screenshot --pid <PID> [--output <PATH>] [--verbose]
+```
+
+| オプション | 必須 | 説明 |
+|-----------|------|------|
+| `--pid` | はい | 対象プロセスID |
+| `--output` | いいえ | PNGファイルとして保存。省略時はbase64形式のJSONを出力。 |
+| `--verbose` | いいえ | 詳細ログを出力 |
+
+## 終了コード
+
+| コード | 意味 |
+|-------|------|
+| 0 | 成功 |
+| 1 | 一般エラー |
+| 2 | プロセス未発見 |
+| 3 | インジェクション失敗 |
+| 4 | タイムアウト |
+
+## アーキテクチャ
+
+SnoopWpfCLI は **DLLインジェクション** と **Named Pipes** を使用して対象のWPFプロセスと通信します。
+
+```
+                          Named Pipe (IPC)
+  +-----------+          +------------------+          +------------------+
+  |           |  inject  |                  |  query/  |                  |
+  |  CLI App  | -------> | WpfInspector.dll | <------> |  対象WPFアプリ    |
+  |           |          | (インジェクトDLL)  |  respond |  (例: TestApp)   |
+  +-----------+          +------------------+          +------------------+
+       |
+       v
+  System.CommandLine         Snoop.InjectorLauncher
+  (CLIフレームワーク)         (snoopwpfサブモジュール)
+```
+
+1. CLI は **Snoop.InjectorLauncher**（snoopwpf サブモジュール）を使用して、対象プロセスに `WpfInspector.dll` をインジェクションします。
+2. インジェクションされたDLLは、対象プロセス内で **Named Pipe サーバー** を起動します。
+3. CLI はNamed Pipes経由でインジェクトされたDLLと通信し、ビジュアルツリーの取得、アクションの実行、スクリーンショットの取得を行います。
+
+## 開発
+
+### ビルド
+
+```bash
+dotnet build src/SnoopWpfCLI.slnx
+```
+
+### 実行
+
+```bash
+dotnet run --project src/App/App.csproj --framework net10.0-windows -- <command> [options]
+```
+
+### テスト実行
+
+```bash
+dotnet test src/App.Tests/App.Tests.csproj
+```
+
+### プロジェクト構成
+
+```
+SnoopWpfCLI/
+├── snoopwpf/                    # Gitサブモジュール（SnoopWPFインジェクター）
+├── src/
+│   ├── App/                     # CLIアプリケーション
+│   │   ├── Commands/            # サブコマンド定義（System.CommandLine）
+│   │   ├── Services/            # InjectionService, WpfProcessService
+│   │   ├── Models/              # データモデル
+│   │   └── Formatters/          # 出力フォーマッター（JSON / ツリー）
+│   ├── WpfInspector/            # インジェクトDLL（ビジュアルツリー検査）
+│   └── App.Tests/               # ユニットテスト（xUnit）
+├── tests/
+│   └── TestApp/                 # テスト用WPFアプリ
+└── docs/
+    ├── plans/                   # 設計ドキュメント
+    ├── specs/                   # 仕様書
+    └── references/              # 参考資料
+```
+
+## ライセンス
+
+MIT
+
+## 謝辞
+
+- [SnoopWPF](https://github.com/snoopwpf/snoopwpf) -- DLLインジェクション基盤を提供するWPF検査ツール
+- [SnoopWpfMcp](https://github.com/aoyagi/SnoopWpfMcp) -- 本CLIの元となったMCPサーバー実装

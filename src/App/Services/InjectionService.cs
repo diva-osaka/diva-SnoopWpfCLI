@@ -47,7 +47,7 @@ public class InjectionService
                     Success = false,
                     ProcessId = processId,
                     Message = $"Process with ID {processId} not found",
-                    Error = "Process not found"
+                    Error = ErrorMessages.ProcessNotFound
                 };
             }
 
@@ -170,7 +170,7 @@ public class InjectionService
                     Hashcode = hashcode,
                     Action = action,
                     Message = $"Process with ID {processId} not found",
-                    Error = "Process not found"
+                    Error = ErrorMessages.ProcessNotFound
                 };
             }
 
@@ -306,7 +306,7 @@ public class InjectionService
                     Success = false,
                     ProcessId = processId,
                     Message = $"Process with ID {processId} not found",
-                    Error = "Process not found"
+                    Error = ErrorMessages.ProcessNotFound
                 };
             }
 
@@ -410,7 +410,7 @@ public class InjectionService
                     Success = false,
                     ProcessId = processId,
                     Message = $"Process with ID {processId} not found",
-                    Error = "Process not found"
+                    Error = ErrorMessages.ProcessNotFound
                 };
             }
 
@@ -493,7 +493,7 @@ public class InjectionService
                     Type = type,
                     Hashcode = hashcode,
                     Message = $"Process with ID {processId} not found",
-                    Error = "Process not found"
+                    Error = ErrorMessages.ProcessNotFound
                 };
             }
 
@@ -612,7 +612,7 @@ public class InjectionService
                     Success = false,
                     ProcessId = processId,
                     Message = $"Process with ID {processId} not found",
-                    Error = "Process not found"
+                    Error = ErrorMessages.ProcessNotFound
                 };
             }
 
