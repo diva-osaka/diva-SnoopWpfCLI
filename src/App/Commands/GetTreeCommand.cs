@@ -47,8 +47,8 @@ public static class GetTreeCommand
 
                 if (format == "tree" && result.Success && !string.IsNullOrEmpty(result.VisualTreeJson))
                 {
-                    var treeElement = JsonDocument.Parse(result.VisualTreeJson).RootElement;
-                    Console.WriteLine(TreeFormatter.FormatVisualTree(treeElement));
+                    using var doc = JsonDocument.Parse(result.VisualTreeJson);
+                    Console.WriteLine(TreeFormatter.FormatVisualTree(doc.RootElement));
                 }
                 else
                 {
@@ -62,13 +62,31 @@ public static class GetTreeCommand
             catch (Exception ex) when (ex is TimeoutException or OperationCanceledException or TaskCanceledException)
             {
                 var error = new { success = false, processId = pid, error = ex.Message };
-                Console.Error.WriteLine(JsonSerializer.Serialize(error));
+                if (format == "tree")
+                {
+                    var jsonStr = JsonSerializer.Serialize(error);
+                    using var doc = JsonDocument.Parse(jsonStr);
+                    Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
+                }
+                else
+                {
+                    Console.Error.WriteLine(JsonSerializer.Serialize(error));
+                }
                 return ExitCodes.Timeout;
             }
             catch (Exception ex)
             {
                 var error = new { success = false, processId = pid, error = ex.Message };
-                Console.Error.WriteLine(JsonSerializer.Serialize(error));
+                if (format == "tree")
+                {
+                    var jsonStr = JsonSerializer.Serialize(error);
+                    using var doc = JsonDocument.Parse(jsonStr);
+                    Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
+                }
+                else
+                {
+                    Console.Error.WriteLine(JsonSerializer.Serialize(error));
+                }
                 return ExitCodes.GeneralError;
             }
         });

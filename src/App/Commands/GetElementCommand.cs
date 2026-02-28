@@ -64,8 +64,8 @@ public static class GetElementCommand
                 if (format == "tree")
                 {
                     var jsonStr = JsonSerializer.Serialize(result);
-                    var element = JsonDocument.Parse(jsonStr).RootElement;
-                    Console.WriteLine(TreeFormatter.FormatGenericResult(element));
+                    using var doc = JsonDocument.Parse(jsonStr);
+                    Console.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
                 }
                 else
                 {
@@ -79,13 +79,31 @@ public static class GetElementCommand
             catch (Exception ex) when (ex is TimeoutException or OperationCanceledException or TaskCanceledException)
             {
                 var error = new { success = false, processId = pid, error = ex.Message };
-                Console.Error.WriteLine(JsonSerializer.Serialize(error));
+                if (format == "tree")
+                {
+                    var jsonStr = JsonSerializer.Serialize(error);
+                    using var doc = JsonDocument.Parse(jsonStr);
+                    Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
+                }
+                else
+                {
+                    Console.Error.WriteLine(JsonSerializer.Serialize(error));
+                }
                 return ExitCodes.Timeout;
             }
             catch (Exception ex)
             {
                 var error = new { success = false, processId = pid, error = ex.Message };
-                Console.Error.WriteLine(JsonSerializer.Serialize(error));
+                if (format == "tree")
+                {
+                    var jsonStr = JsonSerializer.Serialize(error);
+                    using var doc = JsonDocument.Parse(jsonStr);
+                    Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
+                }
+                else
+                {
+                    Console.Error.WriteLine(JsonSerializer.Serialize(error));
+                }
                 return ExitCodes.GeneralError;
             }
         });

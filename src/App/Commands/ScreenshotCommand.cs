@@ -53,8 +53,24 @@ public static class ScreenshotCommand
             {
                 var result = await service.TakeScreenshotAsync(pid);
 
-                if (result.Success && !string.IsNullOrEmpty(outputPath) && !string.IsNullOrEmpty(result.ImageData))
+                if (result.Success && !string.IsNullOrEmpty(outputPath))
                 {
+                    if (string.IsNullOrEmpty(result.ImageData))
+                    {
+                        var emptyError = new { success = false, processId = pid, error = "Screenshot succeeded but image data is empty" };
+                        if (format == "tree")
+                        {
+                            var jsonStr = JsonSerializer.Serialize(emptyError);
+                            using var doc = JsonDocument.Parse(jsonStr);
+                            Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
+                        }
+                        else
+                        {
+                            Console.Error.WriteLine(JsonSerializer.Serialize(emptyError));
+                        }
+                        return ExitCodes.GeneralError;
+                    }
+
                     var imageBytes = Convert.FromBase64String(result.ImageData);
                     await File.WriteAllBytesAsync(outputPath, imageBytes, cancellationToken);
 
@@ -74,8 +90,8 @@ public static class ScreenshotCommand
                     if (format == "tree")
                     {
                         var jsonStr = JsonSerializer.Serialize(fileResult);
-                        var element = JsonDocument.Parse(jsonStr).RootElement;
-                        Console.WriteLine(TreeFormatter.FormatGenericResult(element));
+                        using var doc = JsonDocument.Parse(jsonStr);
+                        Console.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
                     }
                     else
                     {
@@ -88,8 +104,8 @@ public static class ScreenshotCommand
                     if (format == "tree")
                     {
                         var jsonStr = JsonSerializer.Serialize(result);
-                        var element = JsonDocument.Parse(jsonStr).RootElement;
-                        Console.WriteLine(TreeFormatter.FormatGenericResult(element));
+                        using var doc = JsonDocument.Parse(jsonStr);
+                        Console.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
                     }
                     else
                     {
@@ -105,13 +121,31 @@ public static class ScreenshotCommand
             catch (Exception ex) when (ex is TimeoutException or OperationCanceledException or TaskCanceledException)
             {
                 var error = new { success = false, processId = pid, error = ex.Message };
-                Console.Error.WriteLine(JsonSerializer.Serialize(error));
+                if (format == "tree")
+                {
+                    var jsonStr = JsonSerializer.Serialize(error);
+                    using var doc = JsonDocument.Parse(jsonStr);
+                    Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
+                }
+                else
+                {
+                    Console.Error.WriteLine(JsonSerializer.Serialize(error));
+                }
                 return ExitCodes.Timeout;
             }
             catch (Exception ex)
             {
                 var error = new { success = false, processId = pid, error = ex.Message };
-                Console.Error.WriteLine(JsonSerializer.Serialize(error));
+                if (format == "tree")
+                {
+                    var jsonStr = JsonSerializer.Serialize(error);
+                    using var doc = JsonDocument.Parse(jsonStr);
+                    Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
+                }
+                else
+                {
+                    Console.Error.WriteLine(JsonSerializer.Serialize(error));
+                }
                 return ExitCodes.GeneralError;
             }
         });
