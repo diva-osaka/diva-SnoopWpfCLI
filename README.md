@@ -11,7 +11,11 @@
 - **get-tree** -- Retrieve the full visual tree of a WPF window (JSON or human-readable tree)
 - **get-subtree** -- Retrieve a subtree rooted at a specific element
 - **get-element** -- Get detailed information about a single element
+- **find-element** -- Search elements by name, text content, or AutomationId
 - **invoke** -- Execute UI Automation actions (click buttons, set text, toggle checkboxes, etc.)
+- **wait** -- Wait for an element to appear, disappear, or change state
+- **list-windows** -- List all windows in a WPF application
+- **get-datacontext** -- Read ViewModel properties bound to an element
 - **screenshot** -- Capture a screenshot of the WPF window (save to file or output as base64)
 
 ## Prerequisites
@@ -240,12 +244,13 @@ snoopwpfcli ping --pid <PID> [--verbose]
 Retrieve the full visual tree of the target WPF window.
 
 ```bash
-snoopwpfcli get-tree --pid <PID> [--format tree] [--verbose]
+snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--verbose]
 ```
 
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--pid` | Yes | Target process ID |
+| `--window` | No | Window index (use `list-windows` to find) |
 | `--format tree` | No | Output as human-readable tree instead of JSON |
 | `--verbose` | No | Enable verbose output |
 
@@ -254,14 +259,15 @@ snoopwpfcli get-tree --pid <PID> [--format tree] [--verbose]
 Retrieve the subtree rooted at a specific element.
 
 ```bash
-snoopwpfcli get-subtree --pid <PID> --type <TYPE> --hash <HASHCODE> [--format tree] [--verbose]
+snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--format tree] [--verbose]
 ```
 
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--pid` | Yes | Target process ID |
-| `--type` | Yes | Fully-qualified element type (e.g. `System.Windows.Controls.Button`) |
-| `--hash` | Yes | Element hashcode |
+| `--name` | No | Element name (x:Name). Alternative to `--type`/`--hash` |
+| `--type` | No | Fully-qualified element type (e.g. `System.Windows.Controls.Button`) |
+| `--hash` | No | Element hashcode |
 | `--format tree` | No | Output as human-readable tree |
 | `--verbose` | No | Enable verbose output |
 
@@ -270,29 +276,50 @@ snoopwpfcli get-subtree --pid <PID> --type <TYPE> --hash <HASHCODE> [--format tr
 Get detailed information about a single element.
 
 ```bash
-snoopwpfcli get-element --pid <PID> --type <TYPE> --hash <HASHCODE> [--verbose]
+snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--verbose]
 ```
 
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--pid` | Yes | Target process ID |
-| `--type` | Yes | Fully-qualified element type |
-| `--hash` | Yes | Element hashcode |
+| `--name` | No | Element name (x:Name). Alternative to `--type`/`--hash` |
+| `--type` | No | Fully-qualified element type |
+| `--hash` | No | Element hashcode |
 | `--verbose` | No | Enable verbose output |
+
+### find-element
+
+Search for elements by name, text content, or AutomationId.
+
+```bash
+snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--verbose]
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `--pid` | Yes | Target process ID |
+| `--name` | No | Element name (x:Name), exact match |
+| `--text` | No | Text/content to search for, partial match |
+| `--automationid` | No | AutomationId, exact match |
+| `--type` | No | Filter by element type |
+| `--verbose` | No | Enable verbose output |
+
+At least one search criterion (`--name`, `--text`, `--automationid`, or `--type`) is required.
 
 ### invoke
 
 Execute a UI Automation action on an element.
 
 ```bash
-snoopwpfcli invoke --pid <PID> --type <TYPE> --hash <HASHCODE> --action <ACTION> [--params <JSON>] [--verbose]
+snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) --action <ACTION> [--params <JSON>] [--verbose]
 ```
 
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--pid` | Yes | Target process ID |
-| `--type` | Yes | Fully-qualified element type |
-| `--hash` | Yes | Element hashcode |
+| `--name` | No | Element name (x:Name). Alternative to `--type`/`--hash` |
+| `--type` | No | Fully-qualified element type |
+| `--hash` | No | Element hashcode |
 | `--action` | Yes | Automation peer action name |
 | `--params` | No | Additional parameters as JSON string |
 | `--verbose` | No | Enable verbose output |
@@ -319,18 +346,70 @@ snoopwpfcli invoke --pid <PID> --type <TYPE> --hash <HASHCODE> --action <ACTION>
 | `Scroll_Status` | Get scroll position |
 | `Scroll_Scroll` | Scroll by amount |
 | `Scroll_SetPosition` | Set absolute scroll position |
+| `ButtonBase_Click` | Fire Click event on ButtonBase derivatives (RadioButton, ToggleButton) |
+| `ExecuteCommand` | Execute the ICommand bound to the element |
+
+### wait
+
+Wait for an element to appear, disappear, or change state.
+
+```bash
+snoopwpfcli wait --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--until <CONDITION>] [--timeout <MS>] [--interval <MS>] [--verbose]
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `--pid` | Yes | Target process ID |
+| `--name` | No | Element name (x:Name) to wait for |
+| `--text` | No | Text/content to wait for (partial match) |
+| `--automationid` | No | AutomationId to wait for |
+| `--until` | No | Wait condition: `found` (default), `gone`, `enabled`, `disabled` |
+| `--timeout` | No | Timeout in milliseconds (default: 30000) |
+| `--interval` | No | Polling interval in milliseconds (default: 500) |
+| `--verbose` | No | Enable verbose output |
+
+### list-windows
+
+List all windows in a WPF application.
+
+```bash
+snoopwpfcli list-windows --pid <PID> [--format json|tree] [--verbose]
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `--pid` | Yes | Target process ID |
+| `--format` | No | Output format: `json` or `tree` |
+| `--verbose` | No | Enable verbose output |
+
+### get-datacontext
+
+Read ViewModel properties bound to an element's DataContext.
+
+```bash
+snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASHCODE> [--property <NAME>] [--verbose]
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `--pid` | Yes | Target process ID |
+| `--type` | Yes | Fully-qualified element type |
+| `--hash` | Yes | Element hashcode |
+| `--property` | No | Return only a specific property |
+| `--verbose` | No | Enable verbose output |
 
 ### screenshot
 
 Capture a screenshot of the WPF window.
 
 ```bash
-snoopwpfcli screenshot --pid <PID> [--output <PATH>] [--verbose]
+snoopwpfcli screenshot --pid <PID> [--window <INDEX>] [--output <PATH>] [--verbose]
 ```
 
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--pid` | Yes | Target process ID |
+| `--window` | No | Window index (use `list-windows` to find) |
 | `--output` | No | Save as PNG file. If omitted, outputs base64 JSON. |
 | `--verbose` | No | Enable verbose output |
 

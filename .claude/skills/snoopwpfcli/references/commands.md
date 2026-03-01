@@ -28,53 +28,74 @@ snoopwpfcli ping --pid <PID> [--verbose]
 ### get-tree
 
 ```bash
-snoopwpfcli get-tree --pid <PID> [--format tree] [--verbose]
+snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--verbose]
 ```
 
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--pid` | Yes | Target process ID |
+| `--window` | No | Window index (use `list-windows` to find) |
 | `--format tree` | No | Human-readable tree instead of JSON |
 | `--verbose` | No | Enable verbose output |
 
 ### get-subtree
 
 ```bash
-snoopwpfcli get-subtree --pid <PID> --type <TYPE> --hash <HASHCODE> [--format tree] [--verbose]
+snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--format tree] [--verbose]
 ```
 
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--pid` | Yes | Target process ID |
-| `--type` | Yes | Fully-qualified element type (e.g. `System.Windows.Controls.Button`) |
-| `--hash` | Yes | Element hashcode |
+| `--name` | No | Element name (x:Name). Alternative to `--type`/`--hash` |
+| `--type` | No | Fully-qualified element type |
+| `--hash` | No | Element hashcode |
 | `--format tree` | No | Human-readable tree |
 | `--verbose` | No | Enable verbose output |
 
 ### get-element
 
 ```bash
-snoopwpfcli get-element --pid <PID> --type <TYPE> --hash <HASHCODE> [--verbose]
+snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--verbose]
 ```
 
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--pid` | Yes | Target process ID |
-| `--type` | Yes | Fully-qualified element type |
-| `--hash` | Yes | Element hashcode |
+| `--name` | No | Element name (x:Name). Alternative to `--type`/`--hash` |
+| `--type` | No | Fully-qualified element type |
+| `--hash` | No | Element hashcode |
 | `--verbose` | No | Enable verbose output |
+
+### find-element
+
+```bash
+snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--verbose]
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `--pid` | Yes | Target process ID |
+| `--name` | No | Element name (x:Name), exact match |
+| `--text` | No | Text/content, partial match |
+| `--automationid` | No | AutomationId, exact match |
+| `--type` | No | Filter by element type |
+| `--verbose` | No | Enable verbose output |
+
+At least one search criterion is required.
 
 ### invoke
 
 ```bash
-snoopwpfcli invoke --pid <PID> --type <TYPE> --hash <HASHCODE> --action <ACTION> [--params <JSON>] [--verbose]
+snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) --action <ACTION> [--params <JSON>] [--verbose]
 ```
 
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--pid` | Yes | Target process ID |
-| `--type` | Yes | Fully-qualified element type |
-| `--hash` | Yes | Element hashcode |
+| `--name` | No | Element name (x:Name). Alternative to `--type`/`--hash` |
+| `--type` | No | Fully-qualified element type |
+| `--hash` | No | Element hashcode |
 | `--action` | Yes | Automation peer action name |
 | `--params` | No | Additional parameters as JSON string |
 | `--verbose` | No | Enable verbose output |
@@ -101,15 +122,61 @@ snoopwpfcli invoke --pid <PID> --type <TYPE> --hash <HASHCODE> --action <ACTION>
 | `Scroll_Status` | Get scroll position | none |
 | `Scroll_Scroll` | Scroll by amount | none |
 | `Scroll_SetPosition` | Set absolute scroll position | none |
+| `ButtonBase_Click` | Fire Click event on ButtonBase (RadioButton, ToggleButton) | none |
+| `ExecuteCommand` | Execute the ICommand bound to the element | none |
 
-### screenshot
+### wait
 
 ```bash
-snoopwpfcli screenshot --pid <PID> [--output <PATH>] [--verbose]
+snoopwpfcli wait --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--until <CONDITION>] [--timeout <MS>] [--interval <MS>] [--verbose]
 ```
 
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--pid` | Yes | Target process ID |
+| `--name` | No | Element name (x:Name) to wait for |
+| `--text` | No | Text/content to wait for (partial match) |
+| `--automationid` | No | AutomationId to wait for |
+| `--until` | No | Wait condition: `found` (default), `gone`, `enabled`, `disabled` |
+| `--timeout` | No | Timeout in milliseconds (default: 30000) |
+| `--interval` | No | Polling interval in milliseconds (default: 500) |
+| `--verbose` | No | Enable verbose output |
+
+### list-windows
+
+```bash
+snoopwpfcli list-windows --pid <PID> [--format json|tree] [--verbose]
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `--pid` | Yes | Target process ID |
+| `--format` | No | Output format: `json` or `tree` |
+| `--verbose` | No | Enable verbose output |
+
+### get-datacontext
+
+```bash
+snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASHCODE> [--property <NAME>] [--verbose]
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `--pid` | Yes | Target process ID |
+| `--type` | Yes | Fully-qualified element type |
+| `--hash` | Yes | Element hashcode |
+| `--property` | No | Return only a specific property |
+| `--verbose` | No | Enable verbose output |
+
+### screenshot
+
+```bash
+snoopwpfcli screenshot --pid <PID> [--window <INDEX>] [--output <PATH>] [--verbose]
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `--pid` | Yes | Target process ID |
+| `--window` | No | Window index (use `list-windows` to find) |
 | `--output` | No | Save as PNG file. If omitted, outputs base64 JSON. |
 | `--verbose` | No | Enable verbose output |

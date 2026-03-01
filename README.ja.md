@@ -11,7 +11,11 @@
 - **get-tree** -- WPFウィンドウのビジュアルツリー全体を取得（JSON形式またはツリー形式）
 - **get-subtree** -- 指定した要素を起点としたサブツリーを取得
 - **get-element** -- 単一要素の詳細情報を取得
+- **find-element** -- 名前、テキスト、AutomationIdで要素を検索
 - **invoke** -- UI Automationアクションを実行（ボタンクリック、テキスト入力、チェックボックス操作など）
+- **wait** -- 要素の出現・消失・状態変化を待機
+- **list-windows** -- WPFアプリケーション内の全ウィンドウを一覧表示
+- **get-datacontext** -- 要素にバインドされたViewModelのプロパティを取得
 - **screenshot** -- WPFウィンドウのスクリーンショットを取得（ファイル保存またはbase64出力）
 
 ## 前提条件
@@ -240,12 +244,13 @@ snoopwpfcli ping --pid <PID> [--verbose]
 対象WPFウィンドウのビジュアルツリー全体を取得します。
 
 ```bash
-snoopwpfcli get-tree --pid <PID> [--format tree] [--verbose]
+snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
 |-----------|------|------|
 | `--pid` | はい | 対象プロセスID |
+| `--window` | いいえ | ウィンドウインデックス（`list-windows` で確認） |
 | `--format tree` | いいえ | JSON形式の代わりに人間可読のツリー形式で出力 |
 | `--verbose` | いいえ | 詳細ログを出力 |
 
@@ -254,14 +259,15 @@ snoopwpfcli get-tree --pid <PID> [--format tree] [--verbose]
 指定した要素を起点としたサブツリーを取得します。
 
 ```bash
-snoopwpfcli get-subtree --pid <PID> --type <TYPE> --hash <HASHCODE> [--format tree] [--verbose]
+snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--format tree] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
 |-----------|------|------|
 | `--pid` | はい | 対象プロセスID |
-| `--type` | はい | 要素の完全修飾型名（例: `System.Windows.Controls.Button`） |
-| `--hash` | はい | 要素のハッシュコード |
+| `--name` | いいえ | 要素名（x:Name）。`--type`/`--hash` の代替 |
+| `--type` | いいえ | 要素の完全修飾型名（例: `System.Windows.Controls.Button`） |
+| `--hash` | いいえ | 要素のハッシュコード |
 | `--format tree` | いいえ | 人間可読のツリー形式で出力 |
 | `--verbose` | いいえ | 詳細ログを出力 |
 
@@ -270,29 +276,50 @@ snoopwpfcli get-subtree --pid <PID> --type <TYPE> --hash <HASHCODE> [--format tr
 単一要素の詳細情報を取得します。
 
 ```bash
-snoopwpfcli get-element --pid <PID> --type <TYPE> --hash <HASHCODE> [--verbose]
+snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
 |-----------|------|------|
 | `--pid` | はい | 対象プロセスID |
-| `--type` | はい | 要素の完全修飾型名 |
-| `--hash` | はい | 要素のハッシュコード |
+| `--name` | いいえ | 要素名（x:Name）。`--type`/`--hash` の代替 |
+| `--type` | いいえ | 要素の完全修飾型名 |
+| `--hash` | いいえ | 要素のハッシュコード |
 | `--verbose` | いいえ | 詳細ログを出力 |
+
+### find-element
+
+名前、テキスト、AutomationIdで要素を検索します。
+
+```bash
+snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--verbose]
+```
+
+| オプション | 必須 | 説明 |
+|-----------|------|------|
+| `--pid` | はい | 対象プロセスID |
+| `--name` | いいえ | 要素名（x:Name）、完全一致 |
+| `--text` | いいえ | テキスト/コンテンツ、部分一致 |
+| `--automationid` | いいえ | AutomationId、完全一致 |
+| `--type` | いいえ | 要素型でフィルタ |
+| `--verbose` | いいえ | 詳細ログを出力 |
+
+検索条件（`--name`、`--text`、`--automationid`、`--type`）のうち少なくとも1つが必要です。
 
 ### invoke
 
 要素に対してUI Automationアクションを実行します。
 
 ```bash
-snoopwpfcli invoke --pid <PID> --type <TYPE> --hash <HASHCODE> --action <ACTION> [--params <JSON>] [--verbose]
+snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) --action <ACTION> [--params <JSON>] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
 |-----------|------|------|
 | `--pid` | はい | 対象プロセスID |
-| `--type` | はい | 要素の完全修飾型名 |
-| `--hash` | はい | 要素のハッシュコード |
+| `--name` | いいえ | 要素名（x:Name）。`--type`/`--hash` の代替 |
+| `--type` | いいえ | 要素の完全修飾型名 |
+| `--hash` | いいえ | 要素のハッシュコード |
 | `--action` | はい | Automation Peerアクション名 |
 | `--params` | いいえ | 追加パラメータ（JSON文字列） |
 | `--verbose` | いいえ | 詳細ログを出力 |
@@ -319,18 +346,70 @@ snoopwpfcli invoke --pid <PID> --type <TYPE> --hash <HASHCODE> --action <ACTION>
 | `Scroll_Status` | スクロール位置を取得 |
 | `Scroll_Scroll` | スクロール量を指定してスクロール |
 | `Scroll_SetPosition` | スクロール位置を絶対値で設定 |
+| `ButtonBase_Click` | ButtonBase派生要素（RadioButton、ToggleButton）のClickイベントを発火 |
+| `ExecuteCommand` | 要素にバインドされたICommandを実行 |
+
+### wait
+
+要素の出現・消失・状態変化を待機します。
+
+```bash
+snoopwpfcli wait --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--until <CONDITION>] [--timeout <MS>] [--interval <MS>] [--verbose]
+```
+
+| オプション | 必須 | 説明 |
+|-----------|------|------|
+| `--pid` | はい | 対象プロセスID |
+| `--name` | いいえ | 待機対象の要素名（x:Name） |
+| `--text` | いいえ | 待機対象のテキスト/コンテンツ（部分一致） |
+| `--automationid` | いいえ | 待機対象のAutomationId |
+| `--until` | いいえ | 待機条件: `found`（デフォルト）、`gone`、`enabled`、`disabled` |
+| `--timeout` | いいえ | タイムアウト（ミリ秒、デフォルト: 30000） |
+| `--interval` | いいえ | ポーリング間隔（ミリ秒、デフォルト: 500） |
+| `--verbose` | いいえ | 詳細ログを出力 |
+
+### list-windows
+
+WPFアプリケーション内の全ウィンドウを一覧表示します。
+
+```bash
+snoopwpfcli list-windows --pid <PID> [--format json|tree] [--verbose]
+```
+
+| オプション | 必須 | 説明 |
+|-----------|------|------|
+| `--pid` | はい | 対象プロセスID |
+| `--format` | いいえ | 出力形式: `json` または `tree` |
+| `--verbose` | いいえ | 詳細ログを出力 |
+
+### get-datacontext
+
+要素のDataContextにバインドされたViewModelのプロパティを取得します。
+
+```bash
+snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASHCODE> [--property <NAME>] [--verbose]
+```
+
+| オプション | 必須 | 説明 |
+|-----------|------|------|
+| `--pid` | はい | 対象プロセスID |
+| `--type` | はい | 要素の完全修飾型名 |
+| `--hash` | はい | 要素のハッシュコード |
+| `--property` | いいえ | 特定プロパティのみ取得 |
+| `--verbose` | いいえ | 詳細ログを出力 |
 
 ### screenshot
 
 WPFウィンドウのスクリーンショットを取得します。
 
 ```bash
-snoopwpfcli screenshot --pid <PID> [--output <PATH>] [--verbose]
+snoopwpfcli screenshot --pid <PID> [--window <INDEX>] [--output <PATH>] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
 |-----------|------|------|
 | `--pid` | はい | 対象プロセスID |
+| `--window` | いいえ | ウィンドウインデックス（`list-windows` で確認） |
 | `--output` | いいえ | PNGファイルとして保存。省略時はbase64形式のJSONを出力。 |
 | `--verbose` | いいえ | 詳細ログを出力 |
 

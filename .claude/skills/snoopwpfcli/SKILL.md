@@ -1,6 +1,6 @@
 ---
 name: snoopwpfcli
-description: Inspect and interact with running WPF applications via the snoopwpfcli CLI. Use when you need to (1) discover running WPF processes, (2) inspect the visual tree of a WPF window, (3) find UI elements by name/type, (4) perform UI actions like clicking buttons, entering text, toggling checkboxes, or scrolling, (5) capture screenshots of WPF windows, or (6) automate E2E testing flows for WPF applications. Triggers on any mention of WPF inspection, WPF UI automation, WPF visual tree, or snoopwpfcli.
+description: Inspect and interact with running WPF applications via the snoopwpfcli CLI. Use when you need to (1) discover running WPF processes, (2) inspect the visual tree of a WPF window, (3) find UI elements by name/text/AutomationId, (4) perform UI actions like clicking buttons, entering text, toggling checkboxes, firing ICommand, or scrolling, (5) wait for elements to appear/disappear/change state, (6) inspect multiple windows and dialogs, (7) read ViewModel DataContext properties, (8) capture screenshots of WPF windows, or (9) automate E2E testing flows for WPF applications. Triggers on any mention of WPF inspection, WPF UI automation, WPF visual tree, or snoopwpfcli.
 ---
 
 # SnoopWpfCLI
@@ -9,60 +9,62 @@ CLI tool for inspecting and automating running WPF applications via DLL injectio
 
 ## Core Workflow
 
-Every interaction follows this sequence:
-
 ```
-1. list-processes  -> Find target PID
-2. ping --pid PID  -> Inject inspector DLL (required once per process)
-3. get-tree / get-element / invoke / screenshot  -> Inspect or interact
+1. list-processes       -> Find target PID
+2. ping --pid PID       -> Inject inspector DLL (required once per process)
+3. find-element / get-tree / invoke / wait / screenshot  -> Inspect or interact
 ```
 
 ## Quick Reference
 
-### 1. Discover WPF Processes
+### 1. Discover & Inject
 
 ```bash
 snoopwpfcli list-processes
-```
-
-Returns JSON with `processId`, `processName`, `mainWindowTitle`, `isWpfApplication`.
-
-### 2. Inject Inspector
-
-```bash
 snoopwpfcli ping --pid <PID>
 ```
 
-Must run once before any inspection command. Idempotent -- safe to call again.
+### 2. Find Elements (stable, name-based)
+
+```bash
+# By name (x:Name)
+snoopwpfcli find-element --pid <PID> --name CountButton
+
+# By text content (partial match)
+snoopwpfcli find-element --pid <PID> --text "Click Me"
+
+# By AutomationId
+snoopwpfcli find-element --pid <PID> --automationid BtnSubmit
+
+# Combine filters
+snoopwpfcli find-element --pid <PID> --type System.Windows.Controls.Button --text "OK"
+```
 
 ### 3. Get Visual Tree
 
 ```bash
-# JSON format (default)
-snoopwpfcli get-tree --pid <PID>
-
-# Human-readable tree
 snoopwpfcli get-tree --pid <PID> --format tree
+snoopwpfcli get-tree --pid <PID> --window 1          # specific window
 ```
 
-Tree format shows: `Type "Content"  [Name]` with indent hierarchy. Use `--format tree` for quick scanning, JSON for programmatic access.
-
-### 4. Find Elements
-
-Elements are identified by `--type` (fully-qualified .NET type) and `--hash` (hashcode). Get these from the tree output.
+### 4. Inspect Elements
 
 ```bash
-# Get subtree from a specific element
-snoopwpfcli get-subtree --pid <PID> --type <TYPE> --hash <HASH>
+# By name (recommended -- stable across restarts)
+snoopwpfcli get-element --pid <PID> --name CountButton
 
-# Get single element details (includes automationPatterns)
-snoopwpfcli get-element --pid <PID> --type <TYPE> --hash <HASH>
+# By type + hashcode (from tree output)
+snoopwpfcli get-element --pid <PID> --type System.Windows.Controls.Button --hash 56789
 ```
 
 ### 5. Perform Actions
 
 ```bash
-snoopwpfcli invoke --pid <PID> --type <TYPE> --hash <HASH> --action <ACTION> [--params <JSON>]
+# By name
+snoopwpfcli invoke --pid <PID> --name CountButton --action Invoke_Invoke
+
+# By type + hash
+snoopwpfcli invoke --pid <PID> --type <TYPE> --hash <HASH> --action <ACTION>
 ```
 
 Common actions:
@@ -76,36 +78,65 @@ Common actions:
 | `SelectionItem_Select` | Select item | none |
 | `RangeValue_Set` | Set slider/progress | `--params '{"value":50}'` |
 | `ExpandCollapse_Toggle` | Expand/collapse | none |
+| `ButtonBase_Click` | Fire Click on RadioButton/ToggleButton (triggers ICommand) | none |
+| `ExecuteCommand` | Execute bound ICommand directly | none |
 
 Full action list: See [references/commands.md](references/commands.md)
 
-### 6. Capture Screenshots
+### 6. Wait for State Changes
 
 ```bash
-# Save to file
-snoopwpfcli screenshot --pid <PID> --output screenshot.png
+# Wait for element to appear
+snoopwpfcli wait --pid <PID> --name LoadingSpinner --until found --timeout 5000
 
-# Get base64 JSON
-snoopwpfcli screenshot --pid <PID>
+# Wait for element to disappear
+snoopwpfcli wait --pid <PID> --name LoadingSpinner --until gone --timeout 10000
+
+# Wait for element to become enabled
+snoopwpfcli wait --pid <PID> --name SubmitButton --until enabled --timeout 5000
+
+# Wait for specific text
+snoopwpfcli wait --pid <PID> --text "Complete" --timeout 5000
+```
+
+### 7. Multiple Windows
+
+```bash
+snoopwpfcli list-windows --pid <PID>
+snoopwpfcli get-tree --pid <PID> --window 1
+snoopwpfcli screenshot --pid <PID> --window 1 --output dialog.png
+```
+
+### 8. Read DataContext (ViewModel)
+
+```bash
+snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASH>
+snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASH> --property Title
+```
+
+### 9. Capture Screenshots
+
+```bash
+snoopwpfcli screenshot --pid <PID> --output screenshot.png
+snoopwpfcli screenshot --pid <PID>   # base64 JSON output
 ```
 
 ## E2E Testing Pattern
-
-For multi-step automation, chain commands sequentially. Always verify state between actions:
 
 ```bash
 # 1. Find and inject
 PID=$(snoopwpfcli list-processes | jq '.processes[0].processId')
 snoopwpfcli ping --pid $PID
 
-# 2. Get tree to find elements
-snoopwpfcli get-tree --pid $PID --format tree
+# 2. Interact using stable names (no hashcode needed)
+snoopwpfcli invoke --pid $PID --name InputTextBox --action Value_Set --params '{"value":"Hello"}'
+snoopwpfcli invoke --pid $PID --name SubmitButton --action Invoke_Invoke
 
-# 3. Interact (click button, verify result)
-snoopwpfcli invoke --pid $PID --type System.Windows.Controls.Button --hash 12345 --action Invoke_Invoke
+# 3. Wait for result
+snoopwpfcli wait --pid $PID --name StatusText --text "Success" --timeout 5000
 
-# 4. Verify state changed
-snoopwpfcli get-element --pid $PID --type System.Windows.Controls.TextBlock --hash 67890
+# 4. Verify
+snoopwpfcli get-element --pid $PID --name ResultLabel
 
 # 5. Screenshot for evidence
 snoopwpfcli screenshot --pid $PID --output result.png
@@ -113,10 +144,11 @@ snoopwpfcli screenshot --pid $PID --output result.png
 
 ## Tips
 
-- **Element identification**: Use `[Name]` from tree output to find elements reliably, then get `--type` and `--hash` from the tree's JSON format.
-- **Multiple windows**: `list-processes` returns all WPF processes. Ping each separately.
+- **Prefer `--name` over `--type`/`--hash`**: Names are stable across process restarts.
+- **Multiple windows**: Use `list-windows` then `--window <index>` on get-tree/screenshot.
+- **RadioButton with ICommand**: Use `ButtonBase_Click` instead of `SelectionItem_Select`.
 - **Re-injection**: If the target app restarts, run `ping` again.
-- **All commands**: Add `--verbose` for detailed logging on failures.
+- **Verbose mode**: Add `--verbose` to any command for detailed logging.
 
 ## Exit Codes
 
