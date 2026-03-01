@@ -118,6 +118,19 @@ public class FindElementCommandTests
         Assert.Equal(0, result.Errors.Count);
     }
 
+    // At least one search criterion (--name, --text, --automationid, --type) is required.
+    // --pid only without any search criteria should parse successfully (validation is at runtime).
+    [Fact]
+    public void Parse_WithPidOnly_NoSearchCriteria_ParsesSuccessfully()
+    {
+        var command = FindElementCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("find-element --pid 1234");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
     [Fact]
     public void Parse_MissingPid_HasErrors()
     {

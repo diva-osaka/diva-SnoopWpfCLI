@@ -71,6 +71,15 @@ public static class FindElementCommand
 
             try
             {
+                if (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(text)
+                    && string.IsNullOrEmpty(automationId) && string.IsNullOrEmpty(type))
+                {
+                    CommandHelpers.WriteError(
+                        new { success = false, processId = pid, error = "At least one search criterion (--name, --text, --automationid, or --type) is required" },
+                        format);
+                    return ExitCodes.GeneralError;
+                }
+
                 var result = await service.FindElementAsync(pid, name, text, automationId, type);
 
                 if (format == "tree")
