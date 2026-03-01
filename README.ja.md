@@ -23,9 +23,11 @@
 
 ```bash
 git clone --recursive https://github.com/diva-osaka/diva-SnoopWpfCLI.git
-cd SnoopWpfCLI
-dotnet build src/SnoopWpfCLI.slnx
+cd diva-SnoopWpfCLI
+dotnet publish src/App/App.csproj -c Release -o ./publish
 ```
+
+`./publish` フォルダに `snoopwpfcli.exe` と必要なDLLがすべて含まれます。このフォルダを `PATH` に追加すると、`snoopwpfcli` コマンドとしてどこからでも使えます。
 
 > `--recursive` フラグは、DLLインジェクションに使用する [SnoopWPF](https://github.com/snoopwpf/snoopwpf) サブモジュールの取得に必要です。
 
@@ -211,7 +213,7 @@ dotnet run --project src/App/App.csproj -- screenshot --pid 12345 \
 実行中のWPFプロセスを一覧表示します。
 
 ```bash
-snoopwpf list-processes [--json] [--format json|tree] [--verbose]
+snoopwpfcli list-processes [--json] [--format json|tree] [--verbose]
 ```
 
 | オプション | デフォルト | 説明 |
@@ -225,7 +227,7 @@ snoopwpf list-processes [--json] [--format json|tree] [--verbose]
 WPFプロセスにインスペクタDLLをインジェクションし、通信を確認します。
 
 ```bash
-snoopwpf ping --pid <PID> [--verbose]
+snoopwpfcli ping --pid <PID> [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -238,7 +240,7 @@ snoopwpf ping --pid <PID> [--verbose]
 対象WPFウィンドウのビジュアルツリー全体を取得します。
 
 ```bash
-snoopwpf get-tree --pid <PID> [--format tree] [--verbose]
+snoopwpfcli get-tree --pid <PID> [--format tree] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -252,7 +254,7 @@ snoopwpf get-tree --pid <PID> [--format tree] [--verbose]
 指定した要素を起点としたサブツリーを取得します。
 
 ```bash
-snoopwpf get-subtree --pid <PID> --type <TYPE> --hash <HASHCODE> [--format tree] [--verbose]
+snoopwpfcli get-subtree --pid <PID> --type <TYPE> --hash <HASHCODE> [--format tree] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -268,7 +270,7 @@ snoopwpf get-subtree --pid <PID> --type <TYPE> --hash <HASHCODE> [--format tree]
 単一要素の詳細情報を取得します。
 
 ```bash
-snoopwpf get-element --pid <PID> --type <TYPE> --hash <HASHCODE> [--verbose]
+snoopwpfcli get-element --pid <PID> --type <TYPE> --hash <HASHCODE> [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -283,7 +285,7 @@ snoopwpf get-element --pid <PID> --type <TYPE> --hash <HASHCODE> [--verbose]
 要素に対してUI Automationアクションを実行します。
 
 ```bash
-snoopwpf invoke --pid <PID> --type <TYPE> --hash <HASHCODE> --action <ACTION> [--params <JSON>] [--verbose]
+snoopwpfcli invoke --pid <PID> --type <TYPE> --hash <HASHCODE> --action <ACTION> [--params <JSON>] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -323,7 +325,7 @@ snoopwpf invoke --pid <PID> --type <TYPE> --hash <HASHCODE> --action <ACTION> [-
 WPFウィンドウのスクリーンショットを取得します。
 
 ```bash
-snoopwpf screenshot --pid <PID> [--output <PATH>] [--verbose]
+snoopwpfcli screenshot --pid <PID> [--output <PATH>] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
