@@ -17,16 +17,19 @@ public static class GetSubtreeCommand
             Required = true
         };
 
-        var typeOption = new Option<string>("--type")
+        var typeOption = new Option<string?>("--type")
         {
-            Description = "Element type name",
-            Required = true
+            Description = "Element type name (required unless --name is specified)"
         };
 
-        var hashOption = new Option<int>("--hash")
+        var hashOption = new Option<int?>("--hash")
         {
-            Description = "Element hashcode",
-            Required = true
+            Description = "Element hashcode (required unless --name is specified)"
+        };
+
+        var nameOption = new Option<string?>("--name")
+        {
+            Description = "Element name (x:Name) - resolves type and hash automatically"
         };
 
         var formatOption = new Option<string>("--format")
@@ -45,20 +48,58 @@ public static class GetSubtreeCommand
         command.Options.Add(pidOption);
         command.Options.Add(typeOption);
         command.Options.Add(hashOption);
+        command.Options.Add(nameOption);
         command.Options.Add(formatOption);
         command.Options.Add(verboseOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var pid = parseResult.GetValue(pidOption);
-            var type = parseResult.GetValue(typeOption)!;
-            var hash = parseResult.GetValue(hashOption);
+            var type = parseResult.GetValue(typeOption);
+            var hashNullable = parseResult.GetValue(hashOption);
+            var name = parseResult.GetValue(nameOption);
             var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
             var service = new InjectionService(verbose);
 
             try
             {
+                // Resolve type/hash from name if specified
+                if (!string.IsNullOrEmpty(name))
+                {
+                    var findResult = await service.FindElementAsync(pid, name, null, null, null);
+                    if (!findResult.Success)
+                    {
+                        var err = new { success = false, processId = pid, error = findResult.Error ?? "Element search failed" };
+                        CommandHelpers.WriteError(err, format);
+                        return findResult.Error == ErrorMessages.ProcessNotFound
+                            ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+                    }
+                    if (findResult.Elements.Count == 0)
+                    {
+                        var err = new { success = false, processId = pid, error = $"Element with name '{name}' not found" };
+                        CommandHelpers.WriteError(err, format);
+                        return ExitCodes.GeneralError;
+                    }
+                    if (findResult.Elements.Count > 1)
+                    {
+                        var err = new { success = false, processId = pid, error = $"Multiple elements found with name '{name}'. Use --type/--hash to specify." };
+                        CommandHelpers.WriteError(err, format);
+                        return ExitCodes.GeneralError;
+                    }
+                    var found = findResult.Elements[0];
+                    type = found.Type;
+                    hashNullable = found.Hashcode;
+                }
+
+                if (string.IsNullOrEmpty(type) || !hashNullable.HasValue)
+                {
+                    var err = new { success = false, processId = pid, error = "Either --name or both --type and --hash must be specified" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+
+                var hash = hashNullable.Value;
                 var result = await service.GetVisualTreeByHashcodeAsync(pid, type, hash);
 
                 if (format == "tree" && result.Success && !string.IsNullOrEmpty(result.VisualTreeJson))
@@ -77,32 +118,12 @@ public static class GetSubtreeCommand
             }
             catch (Exception ex) when (ex is TimeoutException or OperationCanceledException or TaskCanceledException)
             {
-                var error = new { success = false, processId = pid, error = ex.Message };
-                if (format == "tree")
-                {
-                    var jsonStr = JsonSerializer.Serialize(error);
-                    using var doc = JsonDocument.Parse(jsonStr);
-                    Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
-                }
-                else
-                {
-                    Console.Error.WriteLine(JsonSerializer.Serialize(error));
-                }
+                CommandHelpers.WriteError(new { success = false, processId = pid, error = ex.Message }, format);
                 return ExitCodes.Timeout;
             }
             catch (Exception ex)
             {
-                var error = new { success = false, processId = pid, error = ex.Message };
-                if (format == "tree")
-                {
-                    var jsonStr = JsonSerializer.Serialize(error);
-                    using var doc = JsonDocument.Parse(jsonStr);
-                    Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
-                }
-                else
-                {
-                    Console.Error.WriteLine(JsonSerializer.Serialize(error));
-                }
+                CommandHelpers.WriteError(new { success = false, processId = pid, error = ex.Message }, format);
                 return ExitCodes.GeneralError;
             }
         });

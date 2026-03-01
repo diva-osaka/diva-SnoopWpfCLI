@@ -9,6 +9,8 @@ using System.Windows.Automation;
 using System.Windows.Automation.Peers;
 using System.Windows.Automation.Provider;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 
 namespace SnoopWpfCLI.WpfInspector
 {
@@ -48,7 +50,10 @@ namespace SnoopWpfCLI.WpfInspector
         public const string Scroll_Status = "Scroll_Status";
         public const string Scroll_Scroll = "Scroll_Scroll";
         public const string Scroll_SetPosition = "Scroll_SetPosition";
-        
+
+        // Direct Element Actions (not automation pattern based)
+        public const string ButtonBase_Click = "ButtonBase_Click";
+        public const string ExecuteCommand = "ExecuteCommand";
     }
 
     /// <summary>
@@ -214,6 +219,17 @@ namespace SnoopWpfCLI.WpfInspector
                     }
                 }
 
+                // Direct element actions (not automation pattern based)
+                if (element is ButtonBase)
+                {
+                    supportedActions.Add(AutomationActions.ButtonBase_Click);
+                }
+
+                if (element is ICommandSource commandSource && commandSource.Command != null)
+                {
+                    supportedActions.Add(AutomationActions.ExecuteCommand);
+                }
+
                 return supportedActions;
             }
         }
@@ -291,8 +307,11 @@ namespace SnoopWpfCLI.WpfInspector
                 AutomationActions.Scroll_Status => ExecuteScrollStatusAction(peer, element),
                 AutomationActions.Scroll_Scroll => ExecuteScrollScrollAction(peer, element, commandData),
                 AutomationActions.Scroll_SetPosition => ExecuteScrollSetPositionAction(peer, element, commandData),
-                
-                
+
+                // Direct Element Actions
+                AutomationActions.ButtonBase_Click => ExecuteButtonBaseClickAction(element),
+                AutomationActions.ExecuteCommand => ExecuteCommandAction(element),
+
                 _ => new { success = false, error = $"Unknown action: {actionName}. Use GetAutomationPeerInfo to see supported actions." }
             };
         }
@@ -634,11 +653,11 @@ namespace SnoopWpfCLI.WpfInspector
                 var provider = peer.GetPattern(PatternInterface.Scroll) as IScrollProvider;
                 if (provider == null)
                     return new { success = false, error = $"Scroll pattern not supported by {element.GetType().Name}" };
-                
+
                 if (!commandData.TryGetProperty("horizontalPercent", out var hPercentElement) ||
                     !commandData.TryGetProperty("verticalPercent", out var vPercentElement))
                     return new { success = false, error = "Missing 'horizontalPercent' and 'verticalPercent' parameters for setposition action" };
-                
+
                 var hPercent = hPercentElement.GetDouble();
                 var vPercent = vPercentElement.GetDouble();
                 provider.SetScrollPercent(hPercent, vPercent);
@@ -647,6 +666,68 @@ namespace SnoopWpfCLI.WpfInspector
             catch (Exception ex)
             {
                 return new { success = false, error = $"Error with Scroll pattern: {ex.Message}" };
+            }
+        }
+
+        // Direct Element Actions (not automation pattern based)
+        private static object ExecuteButtonBaseClickAction(UIElement element)
+        {
+            try
+            {
+                if (element is not ButtonBase buttonBase)
+                    return new { success = false, error = $"{element.GetType().Name} is not a ButtonBase derivative" };
+
+                if (!buttonBase.IsEnabled)
+                    return new { success = false, error = $"{element.GetType().Name} is disabled" };
+
+                var onClickMethod = typeof(ButtonBase).GetMethod("OnClick", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (onClickMethod == null)
+                    return new { success = false, error = "Could not find OnClick method on ButtonBase" };
+
+                onClickMethod.Invoke(buttonBase, null);
+                return new { success = true, message = $"{element.GetType().Name} clicked via ButtonBase.OnClick()" };
+            }
+            catch (Exception ex)
+            {
+                return new { success = false, error = $"Error executing ButtonBase click: {ex.Message}" };
+            }
+        }
+
+        private static object ExecuteCommandAction(UIElement element)
+        {
+            try
+            {
+                if (element is not ICommandSource commandSource)
+                    return new { success = false, error = $"{element.GetType().Name} does not implement ICommandSource" };
+
+                var command = commandSource.Command;
+                if (command == null)
+                    return new { success = false, error = $"No command is bound to {element.GetType().Name}" };
+
+                var parameter = commandSource.CommandParameter;
+
+                if (command is RoutedCommand routedCommand)
+                {
+                    var target = commandSource.CommandTarget ?? (element as IInputElement);
+                    if (target == null)
+                        return new { success = false, error = $"Cannot resolve CommandTarget for {element.GetType().Name}" };
+
+                    if (!routedCommand.CanExecute(parameter, target))
+                        return new { success = false, error = $"RoutedCommand on {element.GetType().Name} cannot execute (CanExecute returned false)" };
+
+                    routedCommand.Execute(parameter, target);
+                    return new { success = true, message = $"RoutedCommand executed on {element.GetType().Name}" };
+                }
+
+                if (!command.CanExecute(parameter))
+                    return new { success = false, error = $"Command on {element.GetType().Name} cannot execute (CanExecute returned false)" };
+
+                command.Execute(parameter);
+                return new { success = true, message = $"Command executed on {element.GetType().Name}" };
+            }
+            catch (Exception ex)
+            {
+                return new { success = false, error = $"Error executing command: {ex.Message}" };
             }
         }
     }

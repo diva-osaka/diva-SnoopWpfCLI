@@ -21,14 +21,32 @@ public static class TreeFormatter
             return "(empty tree)";
         }
 
-        if (!element.TryGetProperty("type", out _))
+        // If the element has a "type" property, it's a direct tree node
+        if (element.TryGetProperty("type", out _))
         {
-            return "(empty tree)";
+            var sb = new StringBuilder();
+            FormatNode(sb, element, "", true);
+            return sb.ToString();
         }
 
-        var sb = new StringBuilder();
-        FormatNode(sb, element, "", true);
-        return sb.ToString();
+        // If the element has a "visualTrees" array, extract and format each root
+        if (element.TryGetProperty("visualTrees", out var visualTrees)
+            && visualTrees.ValueKind == JsonValueKind.Array
+            && visualTrees.GetArrayLength() > 0)
+        {
+            var sb = new StringBuilder();
+            bool first = true;
+            foreach (var root in visualTrees.EnumerateArray())
+            {
+                if (!first)
+                    sb.Append('\n');
+                first = false;
+                FormatNode(sb, root, "", true);
+            }
+            return sb.ToString();
+        }
+
+        return "(empty tree)";
     }
 
     public static string FormatProcessList(JsonElement element)
@@ -71,6 +89,116 @@ public static class TreeFormatter
 
             sb.Append($"{pid.PadRight(pidWidth)}{ColumnSeparator}{name.PadRight(nameWidth)}{ColumnSeparator}{title}");
             sb.Append('\n');
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    public static string FormatFindElementResult(JsonElement element)
+    {
+        var sb = new StringBuilder();
+
+        var success = element.TryGetProperty("success", out var successProp) && successProp.GetBoolean();
+        var matchCount = element.TryGetProperty("matchCount", out var matchCountProp) ? matchCountProp.GetInt32() : 0;
+
+        if (!success)
+        {
+            var error = element.TryGetProperty("error", out var errProp) ? errProp.GetString() ?? "Unknown error" : "Unknown error";
+            sb.Append($"Failed: {error}");
+            return sb.ToString();
+        }
+
+        sb.Append($"Found {matchCount} element(s)");
+
+        if (element.TryGetProperty("processId", out var pidProp))
+        {
+            sb.Append($" (PID: {pidProp})");
+        }
+
+        sb.Append('\n');
+
+        if (element.TryGetProperty("elements", out var elements) && elements.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var elem in elements.EnumerateArray())
+            {
+                var type = elem.TryGetProperty("type", out var t) ? t.GetString() ?? "Unknown" : "Unknown";
+                var lastDot = type.LastIndexOf('.');
+                var shortType = lastDot >= 0 ? type.Substring(lastDot + 1) : type;
+
+                var hashCode = elem.TryGetProperty("hashcode", out var h) ? h.GetInt32()
+                    : elem.TryGetProperty("hashCode", out var hUpper) ? hUpper.GetInt32() : 0;
+
+                sb.Append($"  {shortType} [#{hashCode}]");
+
+                if (elem.TryGetProperty("name", out var nameProp) && nameProp.ValueKind == JsonValueKind.String)
+                {
+                    var name = nameProp.GetString();
+                    if (!string.IsNullOrEmpty(name))
+                        sb.Append($" Name=\"{name}\"");
+                }
+
+                if (elem.TryGetProperty("content", out var contentProp) && contentProp.ValueKind == JsonValueKind.String)
+                {
+                    var content = contentProp.GetString();
+                    if (!string.IsNullOrEmpty(content))
+                        sb.Append($" Content=\"{content}\"");
+                }
+
+                if (elem.TryGetProperty("automationId", out var aidProp) && aidProp.ValueKind == JsonValueKind.String)
+                {
+                    var automationId = aidProp.GetString();
+                    if (!string.IsNullOrEmpty(automationId))
+                        sb.Append($" AutomationId=\"{automationId}\"");
+                }
+
+                sb.Append('\n');
+            }
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    public static string FormatWindowsList(JsonElement element)
+    {
+        var sb = new StringBuilder();
+
+        var success = element.TryGetProperty("success", out var successProp) && successProp.GetBoolean();
+        var windowCount = element.TryGetProperty("windowCount", out var countProp) ? countProp.GetInt32() : 0;
+
+        if (!success)
+        {
+            var error = element.TryGetProperty("error", out var errProp) ? errProp.GetString() ?? "Unknown error" : "Unknown error";
+            sb.Append($"Failed: {error}");
+            return sb.ToString();
+        }
+
+        sb.Append($"{windowCount} window(s)");
+
+        if (element.TryGetProperty("processId", out var pidProp))
+        {
+            sb.Append($" (PID: {pidProp})");
+        }
+
+        sb.Append('\n');
+
+        if (element.TryGetProperty("windows", out var windows) && windows.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var win in windows.EnumerateArray())
+            {
+                var index = win.TryGetProperty("index", out var idx) ? idx.GetInt32() : 0;
+                var type = win.TryGetProperty("type", out var t) ? t.GetString() ?? "Unknown" : "Unknown";
+                var lastDot = type.LastIndexOf('.');
+                var shortType = lastDot >= 0 ? type.Substring(lastDot + 1) : type;
+
+                var title = win.TryGetProperty("title", out var titleProp) ? titleProp.GetString() ?? "" : "";
+                var width = win.TryGetProperty("width", out var w) ? w.GetDouble() : 0;
+                var height = win.TryGetProperty("height", out var h) ? h.GetDouble() : 0;
+                var isVisible = win.TryGetProperty("isVisible", out var vis) && vis.GetBoolean();
+                var isActive = win.TryGetProperty("isActive", out var act) && act.GetBoolean();
+
+                sb.Append($"  [{index}] {shortType} \"{title}\" ({width}x{height}) {(isVisible ? "visible" : "hidden")} {(isActive ? "active" : "inactive")}");
+                sb.Append('\n');
+            }
         }
 
         return sb.ToString().TrimEnd();

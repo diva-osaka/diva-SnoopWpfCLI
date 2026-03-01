@@ -404,4 +404,94 @@ public class TreeFormatterTests
         Assert.Contains("Name=\"btnSubmit\"", result);
         Assert.Contains("Content=\"Submit\"", result);
     }
+
+    [Fact]
+    public void FormatVisualTree_WpfInspectorResponse_ExtractsVisualTrees()
+    {
+        // This is the actual structure returned by WpfInspector
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "controlCount": 2,
+            "visualTrees": [
+                {
+                    "type": "System.Windows.Window",
+                    "hashCode": 100,
+                    "properties": {
+                        "Title": "Main Window"
+                    },
+                    "children": [
+                        {
+                            "type": "System.Windows.Controls.Grid",
+                            "hashCode": 200
+                        }
+                    ]
+                }
+            ]
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatVisualTree(element);
+
+        Assert.NotEqual("(empty tree)", result);
+        Assert.Contains("Window [#100]", result);
+        Assert.Contains("Title=\"Main Window\"", result);
+        Assert.Contains("Grid [#200]", result);
+    }
+
+    [Fact]
+    public void FormatVisualTree_WpfInspectorResponse_MultipleRoots()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "controlCount": 3,
+            "visualTrees": [
+                {
+                    "type": "System.Windows.Window",
+                    "hashCode": 100,
+                    "properties": {
+                        "Title": "Window 1"
+                    }
+                },
+                {
+                    "type": "System.Windows.Window",
+                    "hashCode": 200,
+                    "properties": {
+                        "Title": "Window 2"
+                    }
+                }
+            ]
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatVisualTree(element);
+
+        Assert.Contains("Window [#100]", result);
+        Assert.Contains("Title=\"Window 1\"", result);
+        Assert.Contains("Window [#200]", result);
+        Assert.Contains("Title=\"Window 2\"", result);
+    }
+
+    [Fact]
+    public void FormatVisualTree_WpfInspectorResponse_EmptyVisualTrees()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "controlCount": 0,
+            "visualTrees": []
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatVisualTree(element);
+
+        Assert.Equal("(empty tree)", result);
+    }
 }
