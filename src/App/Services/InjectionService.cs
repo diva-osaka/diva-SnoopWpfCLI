@@ -153,6 +153,22 @@ public class InjectionService
         return false;
     }
 
+    private async Task<(bool success, string? error)> EnsureInjectedAsync(int processId)
+    {
+        var alreadyInjected = await IsAlreadyInjectedAsync(processId);
+        if (alreadyInjected) return (true, null);
+
+        Log($"Injecting WpfInspector into process {processId}");
+        var injectionSuccess = await InjectWpfInspectorAsync(processId);
+        if (!injectionSuccess) return (false, "Failed to inject WpfInspector");
+
+        Log($"Successfully injected WpfInspector into process {processId}");
+        _injectedProcesses[processId] = DateTime.UtcNow;
+        Log("Waiting for pipe server to start...");
+        await Task.Delay(2000);
+        return (true, null);
+    }
+
     public async Task<AutomationPeerResult> InvokeAutomationPeerAsync(int processId, string type, int hashcode, string action, string? parameters = null)
     {
         Log($"Starting automation peer action for process {processId}, element type: '{type}', hashcode: {hashcode}, action: '{action}'");
@@ -176,28 +192,19 @@ public class InjectionService
 
             Log($"Target process: {process.ProcessName} (PID: {process.Id})");
 
-            var alreadyInjected = await IsAlreadyInjectedAsync(processId);
-
-            if (!alreadyInjected)
+            var (injected, injectionError) = await EnsureInjectedAsync(processId);
+            if (!injected)
             {
-                Log($"Injecting WpfInspector into process {processId}");
-                var injectionSuccess = await InjectWpfInspectorAsync(processId);
-
-                if (!injectionSuccess)
+                return new AutomationPeerResult
                 {
-                    return new AutomationPeerResult
-                    {
-                        Success = false,
-                        ProcessId = processId,
-                        Type = type,
-                        Hashcode = hashcode,
-                        Action = action,
-                        Message = "Failed to inject WpfInspector",
-                        Error = "Injection failed"
-                    };
-                }
-
-                Log($"Successfully injected WpfInspector into process {processId}");
+                    Success = false,
+                    ProcessId = processId,
+                    Type = type,
+                    Hashcode = hashcode,
+                    Action = action,
+                    Message = injectionError ?? "Failed to inject WpfInspector",
+                    Error = "Injection failed"
+                };
             }
 
             var commandData = new
@@ -414,29 +421,16 @@ public class InjectionService
 
             Log($"Target process: {process.ProcessName} (PID: {process.Id})");
 
-            var alreadyInjected = await IsAlreadyInjectedAsync(processId);
-
-            if (!alreadyInjected)
+            var (injected, injectionError) = await EnsureInjectedAsync(processId);
+            if (!injected)
             {
-                Log($"Injecting WpfInspector into process {processId}");
-                var injectionSuccess = await InjectWpfInspectorAsync(processId);
-
-                if (!injectionSuccess)
+                return new ScreenshotResult
                 {
-                    return new ScreenshotResult
-                    {
-                        Success = false,
-                        ProcessId = processId,
-                        Message = "Failed to inject WpfInspector",
-                        Error = "Injection failed"
-                    };
-                }
-
-                Log($"WpfInspector injected successfully into process {processId}");
-                _injectedProcesses[processId] = DateTime.UtcNow;
-
-                Log("Waiting for pipe server to start...");
-                await Task.Delay(2000);
+                    Success = false,
+                    ProcessId = processId,
+                    Message = injectionError ?? "Failed to inject WpfInspector",
+                    Error = "Injection failed"
+                };
             }
 
             Log($"Sending screenshot command to process {processId}");
@@ -601,31 +595,18 @@ public class InjectionService
 
             Log($"Target process: {process.ProcessName} (PID: {process.Id})");
 
-            var alreadyInjected = await IsAlreadyInjectedAsync(processId);
-
-            if (!alreadyInjected)
+            var (injected, injectionError) = await EnsureInjectedAsync(processId);
+            if (!injected)
             {
-                Log($"Injecting WpfInspector into process {processId}");
-                var injectionSuccess = await InjectWpfInspectorAsync(processId);
-
-                if (!injectionSuccess)
+                return new ElementResult
                 {
-                    return new ElementResult
-                    {
-                        Success = false,
-                        ProcessId = processId,
-                        Type = type,
-                        Hashcode = hashcode,
-                        Message = "Failed to inject WpfInspector",
-                        Error = "Injection failed"
-                    };
-                }
-
-                Log($"Successfully injected WpfInspector into process {processId}");
-                _injectedProcesses[processId] = DateTime.UtcNow;
-
-                Log("Waiting for pipe server to start...");
-                await Task.Delay(2000);
+                    Success = false,
+                    ProcessId = processId,
+                    Type = type,
+                    Hashcode = hashcode,
+                    Message = injectionError ?? "Failed to inject WpfInspector",
+                    Error = "Injection failed"
+                };
             }
 
             var commandData = new
@@ -720,29 +701,16 @@ public class InjectionService
 
             Log($"Target process: {process.ProcessName} (PID: {process.Id})");
 
-            var alreadyInjected = await IsAlreadyInjectedAsync(processId);
-
-            if (!alreadyInjected)
+            var (injected, injectionError) = await EnsureInjectedAsync(processId);
+            if (!injected)
             {
-                Log($"Injecting WpfInspector into process {processId}");
-                var injectionSuccess = await InjectWpfInspectorAsync(processId);
-
-                if (!injectionSuccess)
+                return new FindElementResult
                 {
-                    return new FindElementResult
-                    {
-                        Success = false,
-                        ProcessId = processId,
-                        Message = "Failed to inject WpfInspector",
-                        Error = "Injection failed"
-                    };
-                }
-
-                Log($"Successfully injected WpfInspector into process {processId}");
-                _injectedProcesses[processId] = DateTime.UtcNow;
-
-                Log("Waiting for pipe server to start...");
-                await Task.Delay(2000);
+                    Success = false,
+                    ProcessId = processId,
+                    Message = injectionError ?? "Failed to inject WpfInspector",
+                    Error = "Injection failed"
+                };
             }
 
             var commandDict = new Dictionary<string, object?>
@@ -785,7 +753,8 @@ public class InjectionService
                     var found = new FoundElement
                     {
                         Type = elem.TryGetProperty("type", out var t) ? t.GetString() ?? "" : "",
-                        Hashcode = elem.TryGetProperty("hashCode", out var h) ? h.GetInt32() : 0,
+                        Hashcode = elem.TryGetProperty("hashCode", out var h) ? h.GetInt32()
+                            : elem.TryGetProperty("hashcode", out var hLower) ? hLower.GetInt32() : 0,
                         Name = elem.TryGetProperty("name", out var n) ? n.GetString() : null,
                         Content = elem.TryGetProperty("content", out var c) ? c.GetString() : null,
                         AutomationId = elem.TryGetProperty("automationId", out var a) ? a.GetString() : null
@@ -840,31 +809,18 @@ public class InjectionService
 
             Log($"Target process: {process.ProcessName} (PID: {process.Id})");
 
-            var alreadyInjected = await IsAlreadyInjectedAsync(processId);
-
-            if (!alreadyInjected)
+            var (injected, injectionError) = await EnsureInjectedAsync(processId);
+            if (!injected)
             {
-                Log($"Injecting WpfInspector into process {processId}");
-                var injectionSuccess = await InjectWpfInspectorAsync(processId);
-
-                if (!injectionSuccess)
+                return new DataContextResult
                 {
-                    return new DataContextResult
-                    {
-                        Success = false,
-                        ProcessId = processId,
-                        ElementType = type,
-                        ElementHashcode = hashcode,
-                        Message = "Failed to inject WpfInspector",
-                        Error = "Injection failed"
-                    };
-                }
-
-                Log($"Successfully injected WpfInspector into process {processId}");
-                _injectedProcesses[processId] = DateTime.UtcNow;
-
-                Log("Waiting for pipe server to start...");
-                await Task.Delay(2000);
+                    Success = false,
+                    ProcessId = processId,
+                    ElementType = type,
+                    ElementHashcode = hashcode,
+                    Message = injectionError ?? "Failed to inject WpfInspector",
+                    Error = "Injection failed"
+                };
             }
 
             var commandData = property != null
@@ -947,23 +903,16 @@ public class InjectionService
                 };
             }
 
-            var alreadyInjected = await IsAlreadyInjectedAsync(processId);
-            if (!alreadyInjected)
+            var (injected, injectionError) = await EnsureInjectedAsync(processId);
+            if (!injected)
             {
-                Log($"Injecting WpfInspector into process {processId} for subtree retrieval");
-                var injectionSuccess = await InjectWpfInspectorAsync(processId);
-                if (!injectionSuccess)
+                return new VisualTreeResult
                 {
-                    return new VisualTreeResult
-                    {
-                        Success = false,
-                        ProcessId = processId,
-                        Message = "Failed to inject WpfInspector",
-                        Error = "Injection failed"
-                    };
-                }
-                _injectedProcesses[processId] = DateTime.UtcNow;
-                await Task.Delay(2000);
+                    Success = false,
+                    ProcessId = processId,
+                    Message = injectionError ?? "Failed to inject WpfInspector",
+                    Error = "Injection failed"
+                };
             }
 
             Log($"Executing GET_VISUAL_TREE_BY_HASHCODE on process {processId}");

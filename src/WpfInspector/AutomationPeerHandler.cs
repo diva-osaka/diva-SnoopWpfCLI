@@ -677,6 +677,9 @@ namespace SnoopWpfCLI.WpfInspector
                 if (element is not ButtonBase buttonBase)
                     return new { success = false, error = $"{element.GetType().Name} is not a ButtonBase derivative" };
 
+                if (!buttonBase.IsEnabled)
+                    return new { success = false, error = $"{element.GetType().Name} is disabled" };
+
                 var onClickMethod = typeof(ButtonBase).GetMethod("OnClick", BindingFlags.Instance | BindingFlags.NonPublic);
                 if (onClickMethod == null)
                     return new { success = false, error = "Could not find OnClick method on ButtonBase" };
@@ -702,6 +705,19 @@ namespace SnoopWpfCLI.WpfInspector
                     return new { success = false, error = $"No command is bound to {element.GetType().Name}" };
 
                 var parameter = commandSource.CommandParameter;
+
+                if (command is RoutedCommand routedCommand)
+                {
+                    var target = commandSource.CommandTarget ?? (element as IInputElement);
+                    if (target == null)
+                        return new { success = false, error = $"Cannot resolve CommandTarget for {element.GetType().Name}" };
+
+                    if (!routedCommand.CanExecute(parameter, target))
+                        return new { success = false, error = $"RoutedCommand on {element.GetType().Name} cannot execute (CanExecute returned false)" };
+
+                    routedCommand.Execute(parameter, target);
+                    return new { success = true, message = $"RoutedCommand executed on {element.GetType().Name}" };
+                }
 
                 if (!command.CanExecute(parameter))
                     return new { success = false, error = $"Command on {element.GetType().Name} cannot execute (CanExecute returned false)" };

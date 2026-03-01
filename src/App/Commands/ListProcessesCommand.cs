@@ -65,17 +65,7 @@ public static class ListProcessesCommand
             }
             catch (Exception ex)
             {
-                var error = new { success = false, error = ex.Message };
-                if (format == "tree")
-                {
-                    var jsonStr = JsonSerializer.Serialize(error);
-                    using var doc = JsonDocument.Parse(jsonStr);
-                    Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
-                }
-                else
-                {
-                    Console.Error.WriteLine(JsonSerializer.Serialize(error));
-                }
+                CommandHelpers.WriteError(new { success = false, error = ex.Message }, format);
                 return ExitCodes.GeneralError;
             }
         });

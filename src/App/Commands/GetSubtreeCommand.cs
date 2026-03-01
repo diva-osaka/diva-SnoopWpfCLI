@@ -1,6 +1,5 @@
 using System;
 using System.CommandLine;
-using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using SnoopWpfCLI.Formatters;
@@ -69,15 +68,26 @@ public static class GetSubtreeCommand
                 if (!string.IsNullOrEmpty(name))
                 {
                     var findResult = await service.FindElementAsync(pid, name, null, null, null);
-                    if (!findResult.Success || findResult.Elements.Count == 0)
+                    if (!findResult.Success)
+                    {
+                        var err = new { success = false, processId = pid, error = findResult.Error ?? "Element search failed" };
+                        CommandHelpers.WriteError(err, format);
+                        return findResult.Error == ErrorMessages.ProcessNotFound
+                            ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+                    }
+                    if (findResult.Elements.Count == 0)
                     {
                         var err = new { success = false, processId = pid, error = $"Element with name '{name}' not found" };
-                        Console.Error.WriteLine(format == "tree"
-                            ? TreeFormatter.FormatGenericResult(JsonDocument.Parse(JsonSerializer.Serialize(err)).RootElement)
-                            : JsonSerializer.Serialize(err));
+                        CommandHelpers.WriteError(err, format);
                         return ExitCodes.GeneralError;
                     }
-                    var found = findResult.Elements.First();
+                    if (findResult.Elements.Count > 1)
+                    {
+                        var err = new { success = false, processId = pid, error = $"Multiple elements found with name '{name}'. Use --type/--hash to specify." };
+                        CommandHelpers.WriteError(err, format);
+                        return ExitCodes.GeneralError;
+                    }
+                    var found = findResult.Elements[0];
                     type = found.Type;
                     hashNullable = found.Hashcode;
                 }
@@ -85,9 +95,7 @@ public static class GetSubtreeCommand
                 if (string.IsNullOrEmpty(type) || !hashNullable.HasValue)
                 {
                     var err = new { success = false, processId = pid, error = "Either --name or both --type and --hash must be specified" };
-                    Console.Error.WriteLine(format == "tree"
-                        ? TreeFormatter.FormatGenericResult(JsonDocument.Parse(JsonSerializer.Serialize(err)).RootElement)
-                        : JsonSerializer.Serialize(err));
+                    CommandHelpers.WriteError(err, format);
                     return ExitCodes.GeneralError;
                 }
 
@@ -110,32 +118,12 @@ public static class GetSubtreeCommand
             }
             catch (Exception ex) when (ex is TimeoutException or OperationCanceledException or TaskCanceledException)
             {
-                var error = new { success = false, processId = pid, error = ex.Message };
-                if (format == "tree")
-                {
-                    var jsonStr = JsonSerializer.Serialize(error);
-                    using var doc = JsonDocument.Parse(jsonStr);
-                    Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
-                }
-                else
-                {
-                    Console.Error.WriteLine(JsonSerializer.Serialize(error));
-                }
+                CommandHelpers.WriteError(new { success = false, processId = pid, error = ex.Message }, format);
                 return ExitCodes.Timeout;
             }
             catch (Exception ex)
             {
-                var error = new { success = false, processId = pid, error = ex.Message };
-                if (format == "tree")
-                {
-                    var jsonStr = JsonSerializer.Serialize(error);
-                    using var doc = JsonDocument.Parse(jsonStr);
-                    Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
-                }
-                else
-                {
-                    Console.Error.WriteLine(JsonSerializer.Serialize(error));
-                }
+                CommandHelpers.WriteError(new { success = false, processId = pid, error = ex.Message }, format);
                 return ExitCodes.GeneralError;
             }
         });

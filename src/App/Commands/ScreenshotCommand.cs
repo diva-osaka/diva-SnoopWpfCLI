@@ -64,17 +64,7 @@ public static class ScreenshotCommand
                 {
                     if (string.IsNullOrEmpty(result.ImageData))
                     {
-                        var emptyError = new { success = false, processId = pid, error = "Screenshot succeeded but image data is empty" };
-                        if (format == "tree")
-                        {
-                            var jsonStr = JsonSerializer.Serialize(emptyError);
-                            using var doc = JsonDocument.Parse(jsonStr);
-                            Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
-                        }
-                        else
-                        {
-                            Console.Error.WriteLine(JsonSerializer.Serialize(emptyError));
-                        }
+                        CommandHelpers.WriteError(new { success = false, processId = pid, error = "Screenshot succeeded but image data is empty" }, format);
                         return ExitCodes.GeneralError;
                     }
 
@@ -94,31 +84,11 @@ public static class ScreenshotCommand
                         format = result.Format
                     };
 
-                    if (format == "tree")
-                    {
-                        var jsonStr = JsonSerializer.Serialize(fileResult);
-                        using var doc = JsonDocument.Parse(jsonStr);
-                        Console.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
-                    }
-                    else
-                    {
-                        var options = new JsonSerializerOptions { WriteIndented = true };
-                        Console.WriteLine(JsonSerializer.Serialize(fileResult, options));
-                    }
+                    CommandHelpers.WriteResult(fileResult, format);
                 }
                 else
                 {
-                    if (format == "tree")
-                    {
-                        var jsonStr = JsonSerializer.Serialize(result);
-                        using var doc = JsonDocument.Parse(jsonStr);
-                        Console.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
-                    }
-                    else
-                    {
-                        var options = new JsonSerializerOptions { WriteIndented = true };
-                        Console.WriteLine(JsonSerializer.Serialize(result, options));
-                    }
+                    CommandHelpers.WriteResult(result, format);
                 }
 
                 if (result.Success)
@@ -127,32 +97,12 @@ public static class ScreenshotCommand
             }
             catch (Exception ex) when (ex is TimeoutException or OperationCanceledException or TaskCanceledException)
             {
-                var error = new { success = false, processId = pid, error = ex.Message };
-                if (format == "tree")
-                {
-                    var jsonStr = JsonSerializer.Serialize(error);
-                    using var doc = JsonDocument.Parse(jsonStr);
-                    Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
-                }
-                else
-                {
-                    Console.Error.WriteLine(JsonSerializer.Serialize(error));
-                }
+                CommandHelpers.WriteError(new { success = false, processId = pid, error = ex.Message }, format);
                 return ExitCodes.Timeout;
             }
             catch (Exception ex)
             {
-                var error = new { success = false, processId = pid, error = ex.Message };
-                if (format == "tree")
-                {
-                    var jsonStr = JsonSerializer.Serialize(error);
-                    using var doc = JsonDocument.Parse(jsonStr);
-                    Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
-                }
-                else
-                {
-                    Console.Error.WriteLine(JsonSerializer.Serialize(error));
-                }
+                CommandHelpers.WriteError(new { success = false, processId = pid, error = ex.Message }, format);
                 return ExitCodes.GeneralError;
             }
         });

@@ -77,7 +77,7 @@ public static class FindElementCommand
                 {
                     var jsonStr = JsonSerializer.Serialize(result);
                     using var doc = JsonDocument.Parse(jsonStr);
-                    Console.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
+                    Console.WriteLine(TreeFormatter.FormatFindElementResult(doc.RootElement));
                 }
                 else
                 {
@@ -90,32 +90,12 @@ public static class FindElementCommand
             }
             catch (Exception ex) when (ex is TimeoutException or OperationCanceledException or TaskCanceledException)
             {
-                var error = new { success = false, processId = pid, error = ex.Message };
-                if (format == "tree")
-                {
-                    var jsonStr = JsonSerializer.Serialize(error);
-                    using var doc = JsonDocument.Parse(jsonStr);
-                    Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
-                }
-                else
-                {
-                    Console.Error.WriteLine(JsonSerializer.Serialize(error));
-                }
+                CommandHelpers.WriteError(new { success = false, processId = pid, error = ex.Message }, format);
                 return ExitCodes.Timeout;
             }
             catch (Exception ex)
             {
-                var error = new { success = false, processId = pid, error = ex.Message };
-                if (format == "tree")
-                {
-                    var jsonStr = JsonSerializer.Serialize(error);
-                    using var doc = JsonDocument.Parse(jsonStr);
-                    Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
-                }
-                else
-                {
-                    Console.Error.WriteLine(JsonSerializer.Serialize(error));
-                }
+                CommandHelpers.WriteError(new { success = false, processId = pid, error = ex.Message }, format);
                 return ExitCodes.GeneralError;
             }
         });
