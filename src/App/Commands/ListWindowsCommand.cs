@@ -7,7 +7,7 @@ using SnoopWpfCLI.Services;
 
 namespace SnoopWpfCLI.Commands;
 
-public static class GetTreeCommand
+public static class ListWindowsCommand
 {
     public static Command Create()
     {
@@ -29,39 +29,34 @@ public static class GetTreeCommand
             Description = "Enable verbose output"
         };
 
-        var windowOption = new Option<int?>("--window")
-        {
-            Description = "Window index (use list-windows to find indices)"
-        };
-
-        var command = new Command("get-tree", "Get the full visual tree");
+        var command = new Command("list-windows", "List all windows in a WPF application");
         command.Options.Add(pidOption);
         command.Options.Add(formatOption);
         command.Options.Add(verboseOption);
-        command.Options.Add(windowOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var pid = parseResult.GetValue(pidOption);
             var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
-            var windowIndex = parseResult.GetValue(windowOption);
             var service = new InjectionService(verbose);
 
             try
             {
-                var result = await service.GetVisualTreeAsync(pid, windowIndex);
+                var result = await service.ListWindowsAsync(pid);
 
-                if (format == "tree" && result.Success && !string.IsNullOrEmpty(result.VisualTreeJson))
+                if (format == "tree")
                 {
-                    using var doc = JsonDocument.Parse(result.VisualTreeJson);
-                    Console.WriteLine(TreeFormatter.FormatVisualTree(doc.RootElement));
+                    var jsonStr = JsonSerializer.Serialize(result);
+                    using var doc = JsonDocument.Parse(jsonStr);
+                    Console.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
                 }
                 else
                 {
                     var options = new JsonSerializerOptions { WriteIndented = true };
                     Console.WriteLine(JsonSerializer.Serialize(result, options));
                 }
+
                 if (result.Success)
                     return ExitCodes.Success;
                 return result.Error == ErrorMessages.ProcessNotFound ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;

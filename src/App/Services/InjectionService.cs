@@ -292,9 +292,111 @@ public class InjectionService
         }
     }
 
-    public async Task<ScreenshotResult> TakeScreenshotAsync(int processId)
+    public async Task<ListWindowsResult> ListWindowsAsync(int processId)
     {
-        Log($"Starting screenshot capture for process {processId}");
+        Log($"Starting list windows for process {processId}");
+
+        try
+        {
+            var process = GetProcess(processId);
+            if (process == null)
+            {
+                return new ListWindowsResult
+                {
+                    Success = false,
+                    ProcessId = processId,
+                    Message = $"Process with ID {processId} not found",
+                    Error = ErrorMessages.ProcessNotFound
+                };
+            }
+
+            Log($"Target process: {process.ProcessName} (PID: {process.Id})");
+
+            var alreadyInjected = await IsAlreadyInjectedAsync(processId);
+
+            if (!alreadyInjected)
+            {
+                var injectionResult = await PingAsync(processId);
+                if (!injectionResult.Success)
+                {
+                    return new ListWindowsResult
+                    {
+                        Success = false,
+                        ProcessId = processId,
+                        Message = $"Failed to inject WpfInspector: {injectionResult.Error}",
+                        Error = injectionResult.Error ?? "Injection failed"
+                    };
+                }
+            }
+
+            var commandData = new { commandType = "LIST_WINDOWS" };
+            var response = await SendRunCommandAsync(processId, commandData);
+
+            if (string.IsNullOrWhiteSpace(response))
+            {
+                return new ListWindowsResult
+                {
+                    Success = false,
+                    ProcessId = processId,
+                    Message = "No response received from WpfInspector",
+                    Error = "Communication timeout or failure"
+                };
+            }
+
+            using var doc = JsonDocument.Parse(response);
+            var root = doc.RootElement;
+
+            var success = root.TryGetProperty("success", out var successElement) && successElement.GetBoolean();
+            var message = root.TryGetProperty("message", out var messageElement) ? messageElement.GetString() ?? "" : "";
+            var error = root.TryGetProperty("error", out var errorElement) ? errorElement.GetString() : null;
+            var windowCount = root.TryGetProperty("windowCount", out var countElement) ? countElement.GetInt32() : 0;
+
+            var windows = new List<WindowInfo>();
+            if (root.TryGetProperty("windows", out var windowsElement) && windowsElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var windowElement in windowsElement.EnumerateArray())
+                {
+                    var windowInfo = new WindowInfo
+                    {
+                        Index = windowElement.TryGetProperty("index", out var idx) ? idx.GetInt32() : 0,
+                        Type = windowElement.TryGetProperty("type", out var t) ? t.GetString() ?? "" : "",
+                        HashCode = windowElement.TryGetProperty("hashCode", out var hc) ? hc.GetInt32() : 0,
+                        Title = windowElement.TryGetProperty("title", out var title) ? title.GetString() ?? "" : "",
+                        Width = windowElement.TryGetProperty("width", out var w) ? w.GetDouble() : 0,
+                        Height = windowElement.TryGetProperty("height", out var h) ? h.GetDouble() : 0,
+                        IsVisible = windowElement.TryGetProperty("isVisible", out var vis) && vis.GetBoolean(),
+                        IsActive = windowElement.TryGetProperty("isActive", out var act) && act.GetBoolean()
+                    };
+                    windows.Add(windowInfo);
+                }
+            }
+
+            return new ListWindowsResult
+            {
+                Success = success,
+                ProcessId = processId,
+                WindowCount = windowCount,
+                Windows = windows,
+                Message = success ? (message ?? string.Empty) : (error ?? "Unknown error"),
+                Error = success ? null : (error ?? "Unknown error")
+            };
+        }
+        catch (Exception ex)
+        {
+            Log($"Error during list windows for process {processId}: {ex.Message}");
+            return new ListWindowsResult
+            {
+                Success = false,
+                ProcessId = processId,
+                Message = "Exception occurred during list windows",
+                Error = ex.Message
+            };
+        }
+    }
+
+    public async Task<ScreenshotResult> TakeScreenshotAsync(int processId, int? windowIndex = null)
+    {
+        Log($"Starting screenshot capture for process {processId}" + (windowIndex.HasValue ? $", windowIndex: {windowIndex}" : ""));
 
         try
         {
@@ -338,7 +440,7 @@ public class InjectionService
             }
 
             Log($"Sending screenshot command to process {processId}");
-            var commandResult = await SendScreenshotCommandAsync(processId);
+            var commandResult = await SendScreenshotCommandAsync(processId, windowIndex: windowIndex);
 
             bool success = false;
             string? message = null;
@@ -396,9 +498,9 @@ public class InjectionService
         }
     }
 
-    public async Task<VisualTreeResult> GetVisualTreeAsync(int processId)
+    public async Task<VisualTreeResult> GetVisualTreeAsync(int processId, int? windowIndex = null)
     {
-        Log($"Starting visual tree retrieval for process {processId}");
+        Log($"Starting visual tree retrieval for process {processId}" + (windowIndex.HasValue ? $", windowIndex: {windowIndex}" : ""));
 
         try
         {
@@ -440,7 +542,7 @@ public class InjectionService
                 Log($"WpfInspector already injected into process {processId}");
             }
 
-            var response = await SendVisualTreeCommandAsync(processId);
+            var response = await SendVisualTreeCommandAsync(processId, windowIndex: windowIndex);
 
             if (string.IsNullOrEmpty(response))
             {
@@ -593,6 +695,235 @@ public class InjectionService
                 Type = type,
                 Hashcode = hashcode,
                 Message = "Exception occurred during element retrieval",
+                Error = ex.Message
+            };
+        }
+    }
+
+    public async Task<FindElementResult> FindElementAsync(int processId, string? name, string? text, string? automationId, string? type)
+    {
+        Log($"Starting find element for process {processId}, name: '{name}', text: '{text}', automationId: '{automationId}', type: '{type}'");
+
+        try
+        {
+            var process = GetProcess(processId);
+            if (process == null)
+            {
+                return new FindElementResult
+                {
+                    Success = false,
+                    ProcessId = processId,
+                    Message = $"Process with ID {processId} not found",
+                    Error = ErrorMessages.ProcessNotFound
+                };
+            }
+
+            Log($"Target process: {process.ProcessName} (PID: {process.Id})");
+
+            var alreadyInjected = await IsAlreadyInjectedAsync(processId);
+
+            if (!alreadyInjected)
+            {
+                Log($"Injecting WpfInspector into process {processId}");
+                var injectionSuccess = await InjectWpfInspectorAsync(processId);
+
+                if (!injectionSuccess)
+                {
+                    return new FindElementResult
+                    {
+                        Success = false,
+                        ProcessId = processId,
+                        Message = "Failed to inject WpfInspector",
+                        Error = "Injection failed"
+                    };
+                }
+
+                Log($"Successfully injected WpfInspector into process {processId}");
+                _injectedProcesses[processId] = DateTime.UtcNow;
+
+                Log("Waiting for pipe server to start...");
+                await Task.Delay(2000);
+            }
+
+            var commandDict = new Dictionary<string, object?>
+            {
+                ["commandType"] = "FIND_ELEMENT"
+            };
+
+            if (name != null) commandDict["name"] = name;
+            if (text != null) commandDict["text"] = text;
+            if (automationId != null) commandDict["automationId"] = automationId;
+            if (type != null) commandDict["type"] = type;
+
+            Log($"Executing find element on process {processId}");
+            var response = await SendRunCommandAsync(processId, commandDict);
+
+            if (string.IsNullOrWhiteSpace(response))
+            {
+                return new FindElementResult
+                {
+                    Success = false,
+                    ProcessId = processId,
+                    Message = "No response received from WpfInspector",
+                    Error = "Communication timeout or failure"
+                };
+            }
+
+            using var doc = JsonDocument.Parse(response);
+            var root = doc.RootElement;
+
+            var success = root.TryGetProperty("success", out var successElement) ? successElement.GetBoolean() : false;
+            var message = root.TryGetProperty("message", out var messageElement) ? messageElement.GetString() ?? "" : "";
+            var error = root.TryGetProperty("error", out var errorElement) ? errorElement.GetString() : null;
+            var matchCount = root.TryGetProperty("matchCount", out var matchCountElement) ? matchCountElement.GetInt32() : 0;
+
+            var elements = new List<FoundElement>();
+            if (root.TryGetProperty("elements", out var elementsElement) && elementsElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var elem in elementsElement.EnumerateArray())
+                {
+                    var found = new FoundElement
+                    {
+                        Type = elem.TryGetProperty("type", out var t) ? t.GetString() ?? "" : "",
+                        Hashcode = elem.TryGetProperty("hashCode", out var h) ? h.GetInt32() : 0,
+                        Name = elem.TryGetProperty("name", out var n) ? n.GetString() : null,
+                        Content = elem.TryGetProperty("content", out var c) ? c.GetString() : null,
+                        AutomationId = elem.TryGetProperty("automationId", out var a) ? a.GetString() : null
+                    };
+                    elements.Add(found);
+                }
+            }
+
+            return new FindElementResult
+            {
+                Success = success,
+                ProcessId = processId,
+                Message = success ? (message ?? string.Empty) : (error ?? "Unknown error"),
+                Error = success ? null : (error ?? "Unknown error"),
+                MatchCount = matchCount,
+                Elements = elements
+            };
+        }
+        catch (Exception ex)
+        {
+            Log($"Error during find element for process {processId}: {ex.Message}");
+
+            return new FindElementResult
+            {
+                Success = false,
+                ProcessId = processId,
+                Message = "Exception occurred during find element",
+                Error = ex.Message
+            };
+        }
+    }
+
+    public async Task<DataContextResult> GetDataContextAsync(int processId, string type, int hashcode, string? property = null)
+    {
+        Log($"Starting DataContext retrieval for process {processId}, type: '{type}', hashcode: {hashcode}, property: '{property}'");
+
+        try
+        {
+            var process = GetProcess(processId);
+            if (process == null)
+            {
+                return new DataContextResult
+                {
+                    Success = false,
+                    ProcessId = processId,
+                    ElementType = type,
+                    ElementHashcode = hashcode,
+                    Message = $"Process with ID {processId} not found",
+                    Error = ErrorMessages.ProcessNotFound
+                };
+            }
+
+            Log($"Target process: {process.ProcessName} (PID: {process.Id})");
+
+            var alreadyInjected = await IsAlreadyInjectedAsync(processId);
+
+            if (!alreadyInjected)
+            {
+                Log($"Injecting WpfInspector into process {processId}");
+                var injectionSuccess = await InjectWpfInspectorAsync(processId);
+
+                if (!injectionSuccess)
+                {
+                    return new DataContextResult
+                    {
+                        Success = false,
+                        ProcessId = processId,
+                        ElementType = type,
+                        ElementHashcode = hashcode,
+                        Message = "Failed to inject WpfInspector",
+                        Error = "Injection failed"
+                    };
+                }
+
+                Log($"Successfully injected WpfInspector into process {processId}");
+                _injectedProcesses[processId] = DateTime.UtcNow;
+
+                Log("Waiting for pipe server to start...");
+                await Task.Delay(2000);
+            }
+
+            var commandData = property != null
+                ? (object)new { commandType = "GET_DATACONTEXT", type, hashcode, property }
+                : new { commandType = "GET_DATACONTEXT", type, hashcode };
+
+            Log($"Executing GET_DATACONTEXT on process {processId}");
+            var response = await SendRunCommandAsync(processId, commandData);
+
+            if (string.IsNullOrWhiteSpace(response))
+            {
+                return new DataContextResult
+                {
+                    Success = false,
+                    ProcessId = processId,
+                    ElementType = type,
+                    ElementHashcode = hashcode,
+                    Message = "No response received from WpfInspector",
+                    Error = "Communication timeout or failure"
+                };
+            }
+
+            using var doc = JsonDocument.Parse(response);
+            var root = doc.RootElement;
+
+            var success = root.TryGetProperty("success", out var successElement) ? successElement.GetBoolean() : false;
+            var message = root.TryGetProperty("message", out var messageElement) ? messageElement.GetString() ?? "" : "";
+            var error = root.TryGetProperty("error", out var errorElement) ? errorElement.GetString() : null;
+            var hasDataContext = root.TryGetProperty("hasDataContext", out var hasDataContextElement) && hasDataContextElement.GetBoolean();
+
+            object? dataContext = null;
+            if (root.TryGetProperty("dataContext", out var dataContextElement) && dataContextElement.ValueKind != JsonValueKind.Null)
+            {
+                dataContext = JsonSerializer.Deserialize<object>(dataContextElement.GetRawText());
+            }
+
+            return new DataContextResult
+            {
+                Success = success,
+                ProcessId = processId,
+                ElementType = type,
+                ElementHashcode = hashcode,
+                Message = success ? (message ?? string.Empty) : (error ?? "Unknown error"),
+                Error = success ? null : (error ?? "Unknown error"),
+                HasDataContext = hasDataContext,
+                DataContext = dataContext
+            };
+        }
+        catch (Exception ex)
+        {
+            Log($"Error during DataContext retrieval for process {processId}: {ex.Message}");
+
+            return new DataContextResult
+            {
+                Success = false,
+                ProcessId = processId,
+                ElementType = type,
+                ElementHashcode = hashcode,
+                Message = "Exception occurred during DataContext retrieval",
                 Error = ex.Message
             };
         }
@@ -808,7 +1139,7 @@ public class InjectionService
         }
     }
 
-    private async Task<string?> SendScreenshotCommandAsync(int processId, TimeSpan? timeout = null)
+    private async Task<string?> SendScreenshotCommandAsync(int processId, TimeSpan? timeout = null, int? windowIndex = null)
     {
         var actualTimeout = timeout ?? TimeSpan.FromSeconds(15);
         var pipeName = $"WpfInspector_{processId}";
@@ -824,10 +1155,9 @@ public class InjectionService
             await pipeClient.ConnectAsync(cts.Token);
             Log("Connected to pipe successfully");
 
-            var command = new
-            {
-                command = "TAKE_SCREENSHOT"
-            };
+            object command = windowIndex.HasValue
+                ? new { command = "TAKE_SCREENSHOT", windowIndex = windowIndex.Value }
+                : new { command = "TAKE_SCREENSHOT" };
 
             var commandJson = JsonSerializer.Serialize(command, GetJsonOptions());
             var messageBytes = Encoding.UTF8.GetBytes(commandJson);
@@ -874,7 +1204,7 @@ public class InjectionService
         }
     }
 
-    private async Task<string?> SendVisualTreeCommandAsync(int processId, TimeSpan? timeout = null)
+    private async Task<string?> SendVisualTreeCommandAsync(int processId, TimeSpan? timeout = null, int? windowIndex = null)
     {
         var actualTimeout = timeout ?? TimeSpan.FromSeconds(15);
         var pipeName = $"WpfInspector_{processId}";
@@ -890,10 +1220,9 @@ public class InjectionService
             await pipeClient.ConnectAsync(cts.Token);
             Log("Connected to pipe successfully");
 
-            var command = new
-            {
-                command = "GET_VISUAL_TREE"
-            };
+            object command = windowIndex.HasValue
+                ? new { command = "GET_VISUAL_TREE", windowIndex = windowIndex.Value }
+                : new { command = "GET_VISUAL_TREE" };
 
             var commandJson = JsonSerializer.Serialize(command, GetJsonOptions());
             var messageBytes = Encoding.UTF8.GetBytes(commandJson);

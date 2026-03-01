@@ -25,6 +25,13 @@ public class GetSubtreeCommandTests
     }
 
     [Fact]
+    public void Command_HasNameOption()
+    {
+        var command = GetSubtreeCommand.Create();
+        Assert.NotNull(command.Options.FirstOrDefault(o => o.Name == "--name"));
+    }
+
+    [Fact]
     public void Parse_WithAllRequiredOptions_NoErrors()
     {
         var command = GetSubtreeCommand.Create();
@@ -36,24 +43,24 @@ public class GetSubtreeCommandTests
     }
 
     [Fact]
-    public void Parse_MissingType_HasErrors()
+    public void Parse_WithNameOption_NoErrors()
     {
         var command = GetSubtreeCommand.Create();
         var root = new RootCommand();
         root.Subcommands.Add(command);
 
-        var result = root.Parse("get-subtree --pid 1234 --hash 5678");
-        Assert.True(result.Errors.Count > 0);
+        var result = root.Parse("get-subtree --pid 1234 --name MyPanel");
+        Assert.Equal(0, result.Errors.Count);
     }
 
     [Fact]
-    public void Parse_MissingHash_HasErrors()
+    public void Parse_MissingPid_HasErrors()
     {
         var command = GetSubtreeCommand.Create();
         var root = new RootCommand();
         root.Subcommands.Add(command);
 
-        var result = root.Parse("get-subtree --pid 1234 --type System.Windows.Controls.Button");
+        var result = root.Parse("get-subtree --type System.Windows.Controls.Button --hash 5678");
         Assert.True(result.Errors.Count > 0);
     }
 }

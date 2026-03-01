@@ -35,11 +35,17 @@ public static class ScreenshotCommand
             Description = "Enable verbose output"
         };
 
+        var windowOption = new Option<int?>("--window")
+        {
+            Description = "Window index (use list-windows to find indices)"
+        };
+
         var command = new Command("screenshot", "Take a WPF screenshot");
         command.Options.Add(pidOption);
         command.Options.Add(outputOption);
         command.Options.Add(formatOption);
         command.Options.Add(verboseOption);
+        command.Options.Add(windowOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
@@ -47,11 +53,12 @@ public static class ScreenshotCommand
             var outputPath = parseResult.GetValue(outputOption);
             var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
+            var windowIndex = parseResult.GetValue(windowOption);
             var service = new InjectionService(verbose);
 
             try
             {
-                var result = await service.TakeScreenshotAsync(pid);
+                var result = await service.TakeScreenshotAsync(pid, windowIndex);
 
                 if (result.Success && !string.IsNullOrEmpty(outputPath))
                 {

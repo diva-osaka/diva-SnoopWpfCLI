@@ -10,5 +10,9 @@ rootCommand.Subcommands.Add(GetSubtreeCommand.Create());
 rootCommand.Subcommands.Add(GetElementCommand.Create());
 rootCommand.Subcommands.Add(InvokeCommand.Create());
 rootCommand.Subcommands.Add(ScreenshotCommand.Create());
+rootCommand.Subcommands.Add(ListWindowsCommand.Create());
+rootCommand.Subcommands.Add(FindElementCommand.Create());
+rootCommand.Subcommands.Add(GetDataContextCommand.Create());
+rootCommand.Subcommands.Add(WaitCommand.Create());
 
 return await rootCommand.Parse(args).InvokeAsync();

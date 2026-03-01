@@ -7,7 +7,7 @@ using SnoopWpfCLI.Services;
 
 namespace SnoopWpfCLI.Commands;
 
-public static class GetTreeCommand
+public static class FindElementCommand
 {
     public static Command Create()
     {
@@ -15,6 +15,26 @@ public static class GetTreeCommand
         {
             Description = "Target process ID",
             Required = true
+        };
+
+        var nameOption = new Option<string?>("--name")
+        {
+            Description = "Element name (x:Name) to search for"
+        };
+
+        var textOption = new Option<string?>("--text")
+        {
+            Description = "Element text/content to search for (partial match)"
+        };
+
+        var automationIdOption = new Option<string?>("--automationid")
+        {
+            Description = "AutomationId to search for"
+        };
+
+        var typeOption = new Option<string?>("--type")
+        {
+            Description = "Element type name to filter by"
         };
 
         var formatOption = new Option<string>("--format")
@@ -29,33 +49,35 @@ public static class GetTreeCommand
             Description = "Enable verbose output"
         };
 
-        var windowOption = new Option<int?>("--window")
-        {
-            Description = "Window index (use list-windows to find indices)"
-        };
-
-        var command = new Command("get-tree", "Get the full visual tree");
+        var command = new Command("find-element", "Find elements by name, text, or AutomationId");
         command.Options.Add(pidOption);
+        command.Options.Add(nameOption);
+        command.Options.Add(textOption);
+        command.Options.Add(automationIdOption);
+        command.Options.Add(typeOption);
         command.Options.Add(formatOption);
         command.Options.Add(verboseOption);
-        command.Options.Add(windowOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var pid = parseResult.GetValue(pidOption);
+            var name = parseResult.GetValue(nameOption);
+            var text = parseResult.GetValue(textOption);
+            var automationId = parseResult.GetValue(automationIdOption);
+            var type = parseResult.GetValue(typeOption);
             var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
-            var windowIndex = parseResult.GetValue(windowOption);
             var service = new InjectionService(verbose);
 
             try
             {
-                var result = await service.GetVisualTreeAsync(pid, windowIndex);
+                var result = await service.FindElementAsync(pid, name, text, automationId, type);
 
-                if (format == "tree" && result.Success && !string.IsNullOrEmpty(result.VisualTreeJson))
+                if (format == "tree")
                 {
-                    using var doc = JsonDocument.Parse(result.VisualTreeJson);
-                    Console.WriteLine(TreeFormatter.FormatVisualTree(doc.RootElement));
+                    var jsonStr = JsonSerializer.Serialize(result);
+                    using var doc = JsonDocument.Parse(jsonStr);
+                    Console.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
                 }
                 else
                 {

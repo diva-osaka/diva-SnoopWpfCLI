@@ -25,6 +25,13 @@ public class GetElementCommandTests
     }
 
     [Fact]
+    public void Command_HasNameOption()
+    {
+        var command = GetElementCommand.Create();
+        Assert.NotNull(command.Options.FirstOrDefault(o => o.Name == "--name"));
+    }
+
+    [Fact]
     public void Parse_WithAllRequiredOptions_NoErrors()
     {
         var command = GetElementCommand.Create();
@@ -32,6 +39,17 @@ public class GetElementCommandTests
         root.Subcommands.Add(command);
 
         var result = root.Parse("get-element --pid 1234 --type System.Windows.Controls.Button --hash 5678");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
+    [Fact]
+    public void Parse_WithNameOption_NoErrors()
+    {
+        var command = GetElementCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("get-element --pid 1234 --name CountButton");
         Assert.Equal(0, result.Errors.Count);
     }
 

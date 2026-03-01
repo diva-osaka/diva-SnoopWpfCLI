@@ -1,5 +1,6 @@
 using System;
 using System.CommandLine;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using SnoopWpfCLI.Formatters;
@@ -17,16 +18,19 @@ public static class InvokeCommand
             Required = true
         };
 
-        var typeOption = new Option<string>("--type")
+        var typeOption = new Option<string?>("--type")
         {
-            Description = "Element type name",
-            Required = true
+            Description = "Element type name (required unless --name is specified)"
         };
 
-        var hashOption = new Option<int>("--hash")
+        var hashOption = new Option<int?>("--hash")
         {
-            Description = "Element hashcode",
-            Required = true
+            Description = "Element hashcode (required unless --name is specified)"
+        };
+
+        var nameOption = new Option<string?>("--name")
+        {
+            Description = "Element name (x:Name) - resolves type and hash automatically"
         };
 
         var actionOption = new Option<string>("--action")
@@ -56,6 +60,7 @@ public static class InvokeCommand
         command.Options.Add(pidOption);
         command.Options.Add(typeOption);
         command.Options.Add(hashOption);
+        command.Options.Add(nameOption);
         command.Options.Add(actionOption);
         command.Options.Add(paramsOption);
         command.Options.Add(formatOption);
@@ -64,8 +69,9 @@ public static class InvokeCommand
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var pid = parseResult.GetValue(pidOption);
-            var type = parseResult.GetValue(typeOption)!;
-            var hash = parseResult.GetValue(hashOption);
+            var type = parseResult.GetValue(typeOption);
+            var hashNullable = parseResult.GetValue(hashOption);
+            var name = parseResult.GetValue(nameOption);
             var action = parseResult.GetValue(actionOption)!;
             var parameters = parseResult.GetValue(paramsOption);
             var format = parseResult.GetValue(formatOption);
@@ -74,6 +80,33 @@ public static class InvokeCommand
 
             try
             {
+                // Resolve type/hash from name if specified
+                if (!string.IsNullOrEmpty(name))
+                {
+                    var findResult = await service.FindElementAsync(pid, name, null, null, null);
+                    if (!findResult.Success || findResult.Elements.Count == 0)
+                    {
+                        var err = new { success = false, processId = pid, error = $"Element with name '{name}' not found" };
+                        Console.Error.WriteLine(format == "tree"
+                            ? TreeFormatter.FormatGenericResult(JsonDocument.Parse(JsonSerializer.Serialize(err)).RootElement)
+                            : JsonSerializer.Serialize(err));
+                        return ExitCodes.GeneralError;
+                    }
+                    var found = findResult.Elements.First();
+                    type = found.Type;
+                    hashNullable = found.Hashcode;
+                }
+
+                if (string.IsNullOrEmpty(type) || !hashNullable.HasValue)
+                {
+                    var err = new { success = false, processId = pid, error = "Either --name or both --type and --hash must be specified" };
+                    Console.Error.WriteLine(format == "tree"
+                        ? TreeFormatter.FormatGenericResult(JsonDocument.Parse(JsonSerializer.Serialize(err)).RootElement)
+                        : JsonSerializer.Serialize(err));
+                    return ExitCodes.GeneralError;
+                }
+
+                var hash = hashNullable.Value;
                 var result = await service.InvokeAutomationPeerAsync(pid, type, hash, action, parameters);
 
                 if (format == "tree")

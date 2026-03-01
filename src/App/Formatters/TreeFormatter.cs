@@ -21,14 +21,32 @@ public static class TreeFormatter
             return "(empty tree)";
         }
 
-        if (!element.TryGetProperty("type", out _))
+        // If the element has a "type" property, it's a direct tree node
+        if (element.TryGetProperty("type", out _))
         {
-            return "(empty tree)";
+            var sb = new StringBuilder();
+            FormatNode(sb, element, "", true);
+            return sb.ToString();
         }
 
-        var sb = new StringBuilder();
-        FormatNode(sb, element, "", true);
-        return sb.ToString();
+        // If the element has a "visualTrees" array, extract and format each root
+        if (element.TryGetProperty("visualTrees", out var visualTrees)
+            && visualTrees.ValueKind == JsonValueKind.Array
+            && visualTrees.GetArrayLength() > 0)
+        {
+            var sb = new StringBuilder();
+            bool first = true;
+            foreach (var root in visualTrees.EnumerateArray())
+            {
+                if (!first)
+                    sb.Append('\n');
+                first = false;
+                FormatNode(sb, root, "", true);
+            }
+            return sb.ToString();
+        }
+
+        return "(empty tree)";
     }
 
     public static string FormatProcessList(JsonElement element)

@@ -26,6 +26,13 @@ public class InvokeCommandTests
     }
 
     [Fact]
+    public void Command_HasNameOption()
+    {
+        var command = InvokeCommand.Create();
+        Assert.NotNull(command.Options.FirstOrDefault(o => o.Name == "--name"));
+    }
+
+    [Fact]
     public void Command_HasOptionalParamsOption()
     {
         var command = InvokeCommand.Create();
@@ -41,6 +48,17 @@ public class InvokeCommandTests
         root.Subcommands.Add(command);
 
         var result = root.Parse("invoke --pid 1234 --type System.Windows.Controls.Button --hash 5678 --action Invoke_Invoke");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
+    [Fact]
+    public void Parse_WithNameOption_NoErrors()
+    {
+        var command = InvokeCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("invoke --pid 1234 --name MyButton --action Invoke_Invoke");
         Assert.Equal(0, result.Errors.Count);
     }
 
@@ -64,5 +82,27 @@ public class InvokeCommandTests
 
         var result = root.Parse("invoke --pid 1234 --type System.Windows.Controls.Button --hash 5678");
         Assert.True(result.Errors.Count > 0);
+    }
+
+    [Fact]
+    public void Parse_WithButtonBaseClickAction_NoErrors()
+    {
+        var command = InvokeCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("invoke --pid 1234 --type System.Windows.Controls.RadioButton --hash 5678 --action ButtonBase_Click");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
+    [Fact]
+    public void Parse_WithExecuteCommandAction_NoErrors()
+    {
+        var command = InvokeCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("invoke --pid 1234 --type System.Windows.Controls.Button --hash 5678 --action ExecuteCommand");
+        Assert.Equal(0, result.Errors.Count);
     }
 }

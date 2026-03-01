@@ -7,7 +7,7 @@ using SnoopWpfCLI.Services;
 
 namespace SnoopWpfCLI.Commands;
 
-public static class GetTreeCommand
+public static class GetDataContextCommand
 {
     public static Command Create()
     {
@@ -15,6 +15,23 @@ public static class GetTreeCommand
         {
             Description = "Target process ID",
             Required = true
+        };
+
+        var typeOption = new Option<string>("--type")
+        {
+            Description = "Element type name",
+            Required = true
+        };
+
+        var hashOption = new Option<int>("--hash")
+        {
+            Description = "Element hashcode",
+            Required = true
+        };
+
+        var propertyOption = new Option<string?>("--property")
+        {
+            Description = "Specific property name to retrieve (optional, returns all if omitted)"
         };
 
         var formatOption = new Option<string>("--format")
@@ -29,33 +46,33 @@ public static class GetTreeCommand
             Description = "Enable verbose output"
         };
 
-        var windowOption = new Option<int?>("--window")
-        {
-            Description = "Window index (use list-windows to find indices)"
-        };
-
-        var command = new Command("get-tree", "Get the full visual tree");
+        var command = new Command("get-datacontext", "Get DataContext of an element");
         command.Options.Add(pidOption);
+        command.Options.Add(typeOption);
+        command.Options.Add(hashOption);
+        command.Options.Add(propertyOption);
         command.Options.Add(formatOption);
         command.Options.Add(verboseOption);
-        command.Options.Add(windowOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var pid = parseResult.GetValue(pidOption);
+            var type = parseResult.GetValue(typeOption)!;
+            var hash = parseResult.GetValue(hashOption);
+            var property = parseResult.GetValue(propertyOption);
             var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
-            var windowIndex = parseResult.GetValue(windowOption);
             var service = new InjectionService(verbose);
 
             try
             {
-                var result = await service.GetVisualTreeAsync(pid, windowIndex);
+                var result = await service.GetDataContextAsync(pid, type, hash, property);
 
-                if (format == "tree" && result.Success && !string.IsNullOrEmpty(result.VisualTreeJson))
+                if (format == "tree")
                 {
-                    using var doc = JsonDocument.Parse(result.VisualTreeJson);
-                    Console.WriteLine(TreeFormatter.FormatVisualTree(doc.RootElement));
+                    var jsonStr = JsonSerializer.Serialize(result);
+                    using var doc = JsonDocument.Parse(jsonStr);
+                    Console.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
                 }
                 else
                 {
