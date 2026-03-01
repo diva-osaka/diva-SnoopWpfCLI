@@ -23,9 +23,11 @@
 
 ```bash
 git clone --recursive https://github.com/diva-osaka/diva-SnoopWpfCLI.git
-cd SnoopWpfCLI
-dotnet build src/SnoopWpfCLI.slnx
+cd diva-SnoopWpfCLI
+dotnet publish src/App/App.csproj -c Release -o ./publish
 ```
+
+The `./publish` folder contains `snoopwpfcli.exe` and all required DLLs. Add this folder to your `PATH` to use `snoopwpfcli` from anywhere.
 
 > The `--recursive` flag is required to fetch the [SnoopWPF](https://github.com/snoopwpf/snoopwpf) submodule used for DLL injection.
 
@@ -211,7 +213,7 @@ dotnet run --project src/App/App.csproj -- screenshot --pid 12345 \
 List running WPF processes.
 
 ```bash
-snoopwpf list-processes [--json] [--format json|tree] [--verbose]
+snoopwpfcli list-processes [--json] [--format json|tree] [--verbose]
 ```
 
 | Option | Default | Description |
@@ -225,7 +227,7 @@ snoopwpf list-processes [--json] [--format json|tree] [--verbose]
 Inject the inspector DLL into a WPF process and verify communication.
 
 ```bash
-snoopwpf ping --pid <PID> [--verbose]
+snoopwpfcli ping --pid <PID> [--verbose]
 ```
 
 | Option | Required | Description |
@@ -238,7 +240,7 @@ snoopwpf ping --pid <PID> [--verbose]
 Retrieve the full visual tree of the target WPF window.
 
 ```bash
-snoopwpf get-tree --pid <PID> [--format tree] [--verbose]
+snoopwpfcli get-tree --pid <PID> [--format tree] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -252,7 +254,7 @@ snoopwpf get-tree --pid <PID> [--format tree] [--verbose]
 Retrieve the subtree rooted at a specific element.
 
 ```bash
-snoopwpf get-subtree --pid <PID> --type <TYPE> --hash <HASHCODE> [--format tree] [--verbose]
+snoopwpfcli get-subtree --pid <PID> --type <TYPE> --hash <HASHCODE> [--format tree] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -268,7 +270,7 @@ snoopwpf get-subtree --pid <PID> --type <TYPE> --hash <HASHCODE> [--format tree]
 Get detailed information about a single element.
 
 ```bash
-snoopwpf get-element --pid <PID> --type <TYPE> --hash <HASHCODE> [--verbose]
+snoopwpfcli get-element --pid <PID> --type <TYPE> --hash <HASHCODE> [--verbose]
 ```
 
 | Option | Required | Description |
@@ -283,7 +285,7 @@ snoopwpf get-element --pid <PID> --type <TYPE> --hash <HASHCODE> [--verbose]
 Execute a UI Automation action on an element.
 
 ```bash
-snoopwpf invoke --pid <PID> --type <TYPE> --hash <HASHCODE> --action <ACTION> [--params <JSON>] [--verbose]
+snoopwpfcli invoke --pid <PID> --type <TYPE> --hash <HASHCODE> --action <ACTION> [--params <JSON>] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -323,7 +325,7 @@ snoopwpf invoke --pid <PID> --type <TYPE> --hash <HASHCODE> --action <ACTION> [-
 Capture a screenshot of the WPF window.
 
 ```bash
-snoopwpf screenshot --pid <PID> [--output <PATH>] [--verbose]
+snoopwpfcli screenshot --pid <PID> [--output <PATH>] [--verbose]
 ```
 
 | Option | Required | Description |

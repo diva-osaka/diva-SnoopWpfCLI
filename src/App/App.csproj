@@ -6,7 +6,7 @@
     <UseWPF>false</UseWPF>
     <Nullable>enable</Nullable>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
-    <AssemblyName>snoopwpf</AssemblyName>
+    <AssemblyName>snoopwpfcli</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,17 +20,27 @@
   </ItemGroup>
 
   <!-- Copy x64 and ARM64 InjectorLauncher executables to output directory -->
-  <Target Name="CopyInjectorLaunchers" AfterTargets="Build">
+  <Target Name="CopyInjectorLaunchers" AfterTargets="Build;Publish">
     <PropertyGroup>
       <InjectorOutputDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\..\snoopwpf\bin\$(Configuration)'))</InjectorOutputDir>
+      <InjectorOutputDirDebug>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\..\snoopwpf\bin\Debug'))</InjectorOutputDirDebug>
+      <CopyDestination Condition="'$(PublishDir)' != ''">$(PublishDir)</CopyDestination>
+      <CopyDestination Condition="'$(PublishDir)' == ''">$(OutputPath)</CopyDestination>
     </PropertyGroup>
     <ItemGroup>
       <InjectorFiles Include="$(InjectorOutputDir)\Snoop.InjectorLauncher.x64.*" />
       <InjectorFiles Include="$(InjectorOutputDir)\Snoop.InjectorLauncher.ARM64.*" />
-      <InjectorFiles Include="$(InjectorOutputDir)\Snoop.GenericInjector.x64.dll" />
-      <InjectorFiles Include="$(InjectorOutputDir)\Snoop.GenericInjector.x86.dll" />
+      <!-- GenericInjector: use Configuration dir if available, fallback to Debug (C++ native DLL, Debug build only) -->
+      <InjectorFiles Include="$(InjectorOutputDir)\Snoop.GenericInjector.x64.dll"
+                     Condition="Exists('$(InjectorOutputDir)\Snoop.GenericInjector.x64.dll')" />
+      <InjectorFiles Include="$(InjectorOutputDirDebug)\Snoop.GenericInjector.x64.dll"
+                     Condition="!Exists('$(InjectorOutputDir)\Snoop.GenericInjector.x64.dll')" />
+      <InjectorFiles Include="$(InjectorOutputDir)\Snoop.GenericInjector.x86.dll"
+                     Condition="Exists('$(InjectorOutputDir)\Snoop.GenericInjector.x86.dll')" />
+      <InjectorFiles Include="$(InjectorOutputDirDebug)\Snoop.GenericInjector.x86.dll"
+                     Condition="!Exists('$(InjectorOutputDir)\Snoop.GenericInjector.x86.dll')" />
     </ItemGroup>
-    <Copy SourceFiles="@(InjectorFiles)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(InjectorFiles)' != ''" />
+    <Copy SourceFiles="@(InjectorFiles)" DestinationFolder="$(CopyDestination)" SkipUnchangedFiles="true" Condition="'@(InjectorFiles)' != ''" />
   </Target>
 
 </Project>

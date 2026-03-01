@@ -32,7 +32,7 @@ public class IntegrationTestBase : IAsyncDisposable
     {
         var testAssemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
         var solutionRoot = Path.GetFullPath(Path.Combine(testAssemblyDir, "..", "..", "..", "..", ".."));
-        return Path.Combine(solutionRoot, "src", "App", "bin", "Debug", "net10.0-windows", "snoopwpf.exe");
+        return Path.Combine(solutionRoot, "src", "App", "bin", "Debug", "net10.0-windows", "snoopwpfcli.exe");
     }
 
     protected async Task<Process> StartTestAppAsync()
