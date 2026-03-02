@@ -226,4 +226,17 @@ public class AssertCommandTests
         var result = root.Parse("assert --pid 1234 --name MyElement --property Status --expected \"\"");
         Assert.Equal(0, result.Errors.Count);
     }
+
+    // --exists and --property are mutually exclusive (parse succeeds but runtime validation rejects)
+    [Fact]
+    public void Parse_WithExistsAndProperty_ParsesSuccessfully()
+    {
+        var command = AssertCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        // Parse itself succeeds; the mutual exclusivity is enforced at runtime
+        var result = root.Parse("assert --pid 1234 --name Btn --exists --property IsEnabled --expected true");
+        Assert.Equal(0, result.Errors.Count);
+    }
 }

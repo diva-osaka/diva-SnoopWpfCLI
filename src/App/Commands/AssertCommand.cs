@@ -119,6 +119,15 @@ public static class AssertCommand
                     return ExitCodes.GeneralError;
                 }
 
+                // Validate: --exists and --property are mutually exclusive
+                if (exists && !string.IsNullOrEmpty(property))
+                {
+                    CommandHelpers.WriteError(
+                        new { success = false, processId = pid, error = "--exists and --property are mutually exclusive. Use --exists to check element presence, or --property with --expected to check a DataContext value." },
+                        format);
+                    return ExitCodes.GeneralError;
+                }
+
                 // Mode 1: --exists assertion
                 if (exists)
                 {
