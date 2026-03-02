@@ -37,6 +37,11 @@ public static class FindElementCommand
             Description = "Element type name to filter by"
         };
 
+        var bindingPathOption = new Option<string?>("--binding-path")
+        {
+            Description = "Find elements with a binding to this property path"
+        };
+
         var formatOption = new Option<string>("--format")
         {
             Description = "Output format: json or tree",
@@ -55,6 +60,7 @@ public static class FindElementCommand
         command.Options.Add(textOption);
         command.Options.Add(automationIdOption);
         command.Options.Add(typeOption);
+        command.Options.Add(bindingPathOption);
         command.Options.Add(formatOption);
         command.Options.Add(verboseOption);
 
@@ -65,6 +71,7 @@ public static class FindElementCommand
             var text = parseResult.GetValue(textOption);
             var automationId = parseResult.GetValue(automationIdOption);
             var type = parseResult.GetValue(typeOption);
+            var bindingPath = parseResult.GetValue(bindingPathOption);
             var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
             var service = new InjectionService(verbose);
@@ -72,15 +79,16 @@ public static class FindElementCommand
             try
             {
                 if (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(text)
-                    && string.IsNullOrEmpty(automationId) && string.IsNullOrEmpty(type))
+                    && string.IsNullOrEmpty(automationId) && string.IsNullOrEmpty(type)
+                    && string.IsNullOrEmpty(bindingPath))
                 {
                     CommandHelpers.WriteError(
-                        new { success = false, processId = pid, error = "At least one search criterion (--name, --text, --automationid, or --type) is required" },
+                        new { success = false, processId = pid, error = "At least one search criterion (--name, --text, --automationid, --type, or --binding-path) is required" },
                         format);
                     return ExitCodes.GeneralError;
                 }
 
-                var result = await service.FindElementAsync(pid, name, text, automationId, type);
+                var result = await service.FindElementAsync(pid, name, text, automationId, type, bindingPath);
 
                 if (format == "tree")
                 {

@@ -681,9 +681,9 @@ public class InjectionService
         }
     }
 
-    public async Task<FindElementResult> FindElementAsync(int processId, string? name, string? text, string? automationId, string? type)
+    public async Task<FindElementResult> FindElementAsync(int processId, string? name, string? text, string? automationId, string? type, string? bindingPath = null)
     {
-        Log($"Starting find element for process {processId}, name: '{name}', text: '{text}', automationId: '{automationId}', type: '{type}'");
+        Log($"Starting find element for process {processId}, name: '{name}', text: '{text}', automationId: '{automationId}', type: '{type}', bindingPath: '{bindingPath}'");
 
         try
         {
@@ -722,6 +722,7 @@ public class InjectionService
             if (text != null) commandDict["text"] = text;
             if (automationId != null) commandDict["automationId"] = automationId;
             if (type != null) commandDict["type"] = type;
+            if (bindingPath != null) commandDict["bindingPath"] = bindingPath;
 
             Log($"Executing find element on process {processId}");
             var response = await SendRunCommandAsync(processId, commandDict);

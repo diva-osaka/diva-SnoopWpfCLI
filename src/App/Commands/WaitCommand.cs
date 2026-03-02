@@ -35,6 +35,11 @@ public static class WaitCommand
             Description = "AutomationId to wait for"
         };
 
+        var typeOption = new Option<string?>("--type")
+        {
+            Description = "Element type name to filter by"
+        };
+
         var untilOption = new Option<string>("--until")
         {
             Description = "Wait condition: found (default), gone, enabled, disabled",
@@ -71,6 +76,7 @@ public static class WaitCommand
         command.Options.Add(nameOption);
         command.Options.Add(textOption);
         command.Options.Add(automationIdOption);
+        command.Options.Add(typeOption);
         command.Options.Add(untilOption);
         command.Options.Add(timeoutOption);
         command.Options.Add(intervalOption);
@@ -83,6 +89,7 @@ public static class WaitCommand
             var name = parseResult.GetValue(nameOption);
             var text = parseResult.GetValue(textOption);
             var automationId = parseResult.GetValue(automationIdOption);
+            var type = parseResult.GetValue(typeOption);
             var until = parseResult.GetValue(untilOption) ?? "found";
             var timeout = parseResult.GetValue(timeoutOption);
             var interval = parseResult.GetValue(intervalOption);
@@ -100,7 +107,7 @@ public static class WaitCommand
                 {
                     linkedCts.Token.ThrowIfCancellationRequested();
 
-                    var findResult = await service.FindElementAsync(pid, name, text, automationId, null);
+                    var findResult = await service.FindElementAsync(pid, name, text, automationId, type);
 
                     if (verbose)
                     {

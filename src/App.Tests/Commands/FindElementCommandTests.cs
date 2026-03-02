@@ -163,4 +163,34 @@ public class FindElementCommandTests
         var result = root.Parse("find-element --pid 1234 --name MyButton --format xml");
         Assert.True(result.Errors.Count > 0);
     }
+
+    [Fact]
+    public void Command_HasBindingPathOption()
+    {
+        var command = FindElementCommand.Create();
+        var opt = command.Options.FirstOrDefault(o => o.Name == "--binding-path");
+        Assert.NotNull(opt);
+    }
+
+    [Fact]
+    public void Parse_WithBindingPathOnly_NoErrors()
+    {
+        var command = FindElementCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("find-element --pid 1234 --binding-path LidarIp");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
+    [Fact]
+    public void Parse_WithBindingPathAndName_NoErrors()
+    {
+        var command = FindElementCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("find-element --pid 1234 --name InputField --binding-path LidarIp");
+        Assert.Equal(0, result.Errors.Count);
+    }
 }

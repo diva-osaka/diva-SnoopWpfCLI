@@ -185,4 +185,33 @@ public class WaitCommandTests
         var result = root.Parse("wait --pid 1234 --automationid BtnSubmit");
         Assert.Equal(0, result.Errors.Count);
     }
+
+    [Fact]
+    public void Command_HasTypeOption()
+    {
+        var command = WaitCommand.Create();
+        Assert.NotNull(command.Options.FirstOrDefault(o => o.Name == "--type"));
+    }
+
+    [Fact]
+    public void Parse_WithTypeOption_NoErrors()
+    {
+        var command = WaitCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("wait --pid 1234 --type System.Windows.Controls.Button --until found");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
+    [Fact]
+    public void Parse_WithNameAndType_NoErrors()
+    {
+        var command = WaitCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("wait --pid 1234 --name CountButton --type System.Windows.Controls.Button --until found --timeout 10000");
+        Assert.Equal(0, result.Errors.Count);
+    }
 }
