@@ -1832,8 +1832,9 @@ namespace SnoopWpfCLI.WpfInspector
 
                 return null;
             }
-            catch
+            catch (Exception ex)
             {
+                LogMessage($"Error in GetElementContentText: {ex.Message}");
                 return null;
             }
         }
@@ -1872,16 +1873,24 @@ namespace SnoopWpfCLI.WpfInspector
         {
             try
             {
-                int count = 0;
-                foreach (var _ in enumerable)
+                // Prefer ICollection.Count to avoid full enumeration on UI thread
+                if (enumerable is System.Collections.ICollection col)
                 {
-                    count++;
-                    if (count > 1000) return "[Collection: 1000+ items]";
+                    return $"[Collection: {col.Count} items]";
                 }
-                return $"[Collection: {count} items]";
+
+                // Try Count property via reflection for IReadOnlyCollection<T> etc.
+                var countProperty = enumerable.GetType().GetProperty("Count", BindingFlags.Public | BindingFlags.Instance);
+                if (countProperty?.PropertyType == typeof(int) && countProperty.GetValue(enumerable) is int count)
+                {
+                    return $"[Collection: {count} items]";
+                }
+
+                return "[Collection: IEnumerable]";
             }
-            catch
+            catch (Exception ex)
             {
+                LogMessage($"Error in SerializeEnumerableCount: {ex.Message}");
                 return "[Collection]";
             }
         }
@@ -1907,16 +1916,17 @@ namespace SnoopWpfCLI.WpfInspector
                             }
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Skip properties that throw
+                        LogMessage($"Error checking binding on {dp.Name}: {ex.Message}");
                     }
                 }
 
                 return false;
             }
-            catch
+            catch (Exception ex)
             {
+                LogMessage($"Error in HasBindingWithPath: {ex.Message}");
                 return false;
             }
         }

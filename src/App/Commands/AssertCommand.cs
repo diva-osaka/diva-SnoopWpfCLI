@@ -100,11 +100,12 @@ public static class AssertCommand
             try
             {
                 // Validate: need at least one search criterion
-                if (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(automationId)
+                if (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(text)
+                    && string.IsNullOrEmpty(automationId)
                     && (string.IsNullOrEmpty(type) || !hash.HasValue))
                 {
                     CommandHelpers.WriteError(
-                        new { success = false, processId = pid, error = "At least --name, --automationid, or both --type and --hash are required" },
+                        new { success = false, processId = pid, error = "At least --name, --text, --automationid, or both --type and --hash are required" },
                         format);
                     return ExitCodes.GeneralError;
                 }
@@ -137,7 +138,7 @@ public static class AssertCommand
                 }
 
                 CommandHelpers.WriteError(
-                    new { success = false, processId = pid, error = "--property requires --expected, --text can be used alone or with --name" },
+                    new { success = false, processId = pid, error = "--property requires --expected" },
                     format);
                 return ExitCodes.GeneralError;
             }
@@ -160,7 +161,7 @@ public static class AssertCommand
         InjectionService service, int pid, string? name, string? text,
         string? automationId, string? type, string? format)
     {
-        var findResult = await service.FindElementAsync(pid, name, null, automationId, type);
+        var findResult = await service.FindElementAsync(pid, name, text, automationId, type);
 
         var passed = findResult.Success && findResult.MatchCount > 0;
         var result = new AssertResult
@@ -185,10 +186,21 @@ public static class AssertCommand
     {
         var findResult = await service.FindElementAsync(pid, name, text, automationId, type);
 
-        var passed = findResult.Success && findResult.MatchCount > 0;
-        var actualContent = passed && findResult.Elements.Count > 0
-            ? findResult.Elements[0].Content
-            : null;
+        string? actualContent = null;
+        var passed = false;
+        if (findResult.Success && findResult.Elements.Count > 0)
+        {
+            foreach (var element in findResult.Elements)
+            {
+                if (string.Equals(element.Content, text, StringComparison.Ordinal))
+                {
+                    actualContent = element.Content;
+                    passed = true;
+                    break;
+                }
+            }
+            actualContent ??= findResult.Elements[0].Content;
+        }
 
         var result = new AssertResult
         {
@@ -199,8 +211,8 @@ public static class AssertCommand
             Expected = text,
             Actual = actualContent,
             Message = passed
-                ? $"Element found with matching text"
-                : $"No element found with text containing \"{text}\""
+                ? $"Element found with exact matching text"
+                : $"No element found with text exactly \"{text}\""
         };
 
         CommandHelpers.WriteResult(result, format);
@@ -261,23 +273,24 @@ public static class AssertCommand
         }
 
         // Extract property value from DataContext JSON
-        var dcJson = JsonSerializer.Serialize(dcResult.DataContext);
-        using var dcDoc = JsonDocument.Parse(dcJson);
         string? actualValue = null;
 
-        if (dcDoc.RootElement.TryGetProperty("properties", out var props) && props.ValueKind == JsonValueKind.Object)
+        if (dcResult.DataContext is JsonElement dataContextElement)
         {
-            foreach (var prop in props.EnumerateObject())
+            if (dataContextElement.TryGetProperty("properties", out var props) && props.ValueKind == JsonValueKind.Object)
             {
-                if (prop.Name.Equals(property, StringComparison.OrdinalIgnoreCase))
+                foreach (var prop in props.EnumerateObject())
                 {
-                    if (prop.Value.TryGetProperty("value", out var valueProp))
+                    if (prop.Name.Equals(property, StringComparison.OrdinalIgnoreCase))
                     {
-                        actualValue = valueProp.ValueKind == JsonValueKind.String
-                            ? valueProp.GetString()
-                            : valueProp.GetRawText();
+                        if (prop.Value.TryGetProperty("value", out var valueProp))
+                        {
+                            actualValue = valueProp.ValueKind == JsonValueKind.String
+                                ? valueProp.GetString()
+                                : valueProp.GetRawText();
+                        }
+                        break;
                     }
-                    break;
                 }
             }
         }
