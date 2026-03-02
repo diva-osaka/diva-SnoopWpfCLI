@@ -54,7 +54,7 @@ public static class AssertCommand
 
         var expectedOption = new Option<string?>("--expected")
         {
-            Description = "Expected value for --property or --text assertion"
+            Description = "Expected value for --property assertion"
         };
 
         var formatOption = new Option<string>("--format")
@@ -168,7 +168,7 @@ public static class AssertCommand
             CommandHelpers.WriteError(
                 new { success = false, processId = pid, error = findResult.Error ?? findResult.Message },
                 format);
-            return findResult.Error == ErrorMessages.ProcessNotFound ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+            return MapFailureExitCode(findResult.Error, findResult.Message);
         }
 
         var passed = findResult.MatchCount > 0;
@@ -199,7 +199,7 @@ public static class AssertCommand
             CommandHelpers.WriteError(
                 new { success = false, processId = pid, error = findResult.Error ?? findResult.Message },
                 format);
-            return findResult.Error == ErrorMessages.ProcessNotFound ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+            return MapFailureExitCode(findResult.Error, findResult.Message);
         }
 
         string? actualContent = null;
@@ -257,7 +257,7 @@ public static class AssertCommand
                 CommandHelpers.WriteError(
                     new { success = false, processId = pid, error = findResult.Error ?? findResult.Message },
                     format);
-                return findResult.Error == ErrorMessages.ProcessNotFound ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+                return MapFailureExitCode(findResult.Error, findResult.Message);
             }
             if (findResult.MatchCount == 0)
             {
@@ -285,7 +285,7 @@ public static class AssertCommand
             CommandHelpers.WriteError(
                 new { success = false, processId = pid, error = dcResult.Error ?? dcResult.Message },
                 format);
-            return dcResult.Error == ErrorMessages.ProcessNotFound ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+            return MapFailureExitCode(dcResult.Error, dcResult.Message);
         }
 
         if (!dcResult.HasDataContext || dcResult.DataContext == null)
@@ -315,7 +315,8 @@ public static class AssertCommand
             {
                 if (prop.Name.Equals(property, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (prop.Value.TryGetProperty("value", out var valueProp))
+                    if (prop.Value.ValueKind == JsonValueKind.Object
+                        && prop.Value.TryGetProperty("value", out var valueProp))
                     {
                         actualValue = valueProp.ValueKind == JsonValueKind.String
                             ? valueProp.GetString()
@@ -342,5 +343,18 @@ public static class AssertCommand
 
         CommandHelpers.WriteResult(result, format);
         return passed ? ExitCodes.Success : ExitCodes.GeneralError;
+    }
+
+    private static int MapFailureExitCode(string? error, string? message)
+    {
+        if (string.Equals(error, ErrorMessages.ProcessNotFound, StringComparison.Ordinal))
+            return ExitCodes.ProcessNotFound;
+
+        var merged = $"{error} {message}";
+        if (merged.Contains("timeout", StringComparison.OrdinalIgnoreCase) ||
+            merged.Contains("timed out", StringComparison.OrdinalIgnoreCase))
+            return ExitCodes.Timeout;
+
+        return ExitCodes.InjectionFailed;
     }
 }
