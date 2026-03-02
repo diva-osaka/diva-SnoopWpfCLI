@@ -132,7 +132,7 @@ public static class AssertCommand
                 }
 
                 // Mode 3: --property + --expected assertion (assert DataContext property value)
-                if (!string.IsNullOrEmpty(property) && !string.IsNullOrEmpty(expected))
+                if (!string.IsNullOrEmpty(property) && expected is not null)
                 {
                     return await AssertProperty(service, pid, name, automationId, type, hash, property, expected, format);
                 }
@@ -163,7 +163,15 @@ public static class AssertCommand
     {
         var findResult = await service.FindElementAsync(pid, name, text, automationId, type);
 
-        var passed = findResult.Success && findResult.MatchCount > 0;
+        if (!findResult.Success)
+        {
+            CommandHelpers.WriteError(
+                new { success = false, processId = pid, error = findResult.Error ?? findResult.Message },
+                format);
+            return findResult.Error == ErrorMessages.ProcessNotFound ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+        }
+
+        var passed = findResult.MatchCount > 0;
         var result = new AssertResult
         {
             Success = true,
@@ -186,9 +194,17 @@ public static class AssertCommand
     {
         var findResult = await service.FindElementAsync(pid, name, text, automationId, type);
 
+        if (!findResult.Success)
+        {
+            CommandHelpers.WriteError(
+                new { success = false, processId = pid, error = findResult.Error ?? findResult.Message },
+                format);
+            return findResult.Error == ErrorMessages.ProcessNotFound ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+        }
+
         string? actualContent = null;
         var passed = false;
-        if (findResult.Success && findResult.Elements.Count > 0)
+        if (findResult.Elements.Count > 0)
         {
             foreach (var element in findResult.Elements)
             {
@@ -236,7 +252,14 @@ public static class AssertCommand
         else
         {
             var findResult = await service.FindElementAsync(pid, name, null, automationId, type);
-            if (!findResult.Success || findResult.MatchCount == 0)
+            if (!findResult.Success)
+            {
+                CommandHelpers.WriteError(
+                    new { success = false, processId = pid, error = findResult.Error ?? findResult.Message },
+                    format);
+                return findResult.Error == ErrorMessages.ProcessNotFound ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+            }
+            if (findResult.MatchCount == 0)
             {
                 var notFoundResult = new AssertResult
                 {
@@ -257,7 +280,15 @@ public static class AssertCommand
         // Get DataContext and check property
         var dcResult = await service.GetDataContextAsync(pid, elementType, elementHash, property);
 
-        if (!dcResult.Success || !dcResult.HasDataContext || dcResult.DataContext == null)
+        if (!dcResult.Success)
+        {
+            CommandHelpers.WriteError(
+                new { success = false, processId = pid, error = dcResult.Error ?? dcResult.Message },
+                format);
+            return dcResult.Error == ErrorMessages.ProcessNotFound ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+        }
+
+        if (!dcResult.HasDataContext || dcResult.DataContext == null)
         {
             var noDcResult = new AssertResult
             {
@@ -266,7 +297,7 @@ public static class AssertCommand
                 Passed = false,
                 Assertion = "property",
                 Expected = expected,
-                Message = dcResult.HasDataContext ? "DataContext has no matching property" : "Element has no DataContext"
+                Message = "Element has no DataContext"
             };
             CommandHelpers.WriteResult(noDcResult, format);
             return ExitCodes.GeneralError;
@@ -275,22 +306,22 @@ public static class AssertCommand
         // Extract property value from DataContext JSON
         string? actualValue = null;
 
-        if (dcResult.DataContext is JsonElement dataContextElement)
+        if (dcResult.DataContext is JsonElement dataContextElement
+            && dataContextElement.ValueKind == JsonValueKind.Object
+            && dataContextElement.TryGetProperty("properties", out var props)
+            && props.ValueKind == JsonValueKind.Object)
         {
-            if (dataContextElement.TryGetProperty("properties", out var props) && props.ValueKind == JsonValueKind.Object)
+            foreach (var prop in props.EnumerateObject())
             {
-                foreach (var prop in props.EnumerateObject())
+                if (prop.Name.Equals(property, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (prop.Name.Equals(property, StringComparison.OrdinalIgnoreCase))
+                    if (prop.Value.TryGetProperty("value", out var valueProp))
                     {
-                        if (prop.Value.TryGetProperty("value", out var valueProp))
-                        {
-                            actualValue = valueProp.ValueKind == JsonValueKind.String
-                                ? valueProp.GetString()
-                                : valueProp.GetRawText();
-                        }
-                        break;
+                        actualValue = valueProp.ValueKind == JsonValueKind.String
+                            ? valueProp.GetString()
+                            : valueProp.GetRawText();
                     }
+                    break;
                 }
             }
         }

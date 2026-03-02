@@ -686,7 +686,7 @@ public class InjectionService
             if (text != null) commandDict["text"] = text;
             if (automationId != null) commandDict["automationId"] = automationId;
             if (type != null) commandDict["type"] = type;
-            if (bindingPath != null) commandDict["bindingPath"] = bindingPath;
+            if (!string.IsNullOrWhiteSpace(bindingPath)) commandDict["bindingPath"] = bindingPath;
 
             Log($"Executing find element on process {processId}");
             var response = await SendRunCommandAsync(processId, commandDict);
