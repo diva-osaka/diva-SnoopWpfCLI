@@ -494,4 +494,299 @@ public class TreeFormatterTests
 
         Assert.Equal("(empty tree)", result);
     }
+
+    // --- FormatFindElementResult tests ---
+
+    [Fact]
+    public void FormatFindElementResult_Success_SingleElement()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "matchCount": 1,
+            "elements": [
+                {
+                    "type": "System.Windows.Controls.Button",
+                    "hashCode": 99999,
+                    "name": "CountButton",
+                    "content": "Click Me",
+                    "automationId": "BtnCount"
+                }
+            ]
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatFindElementResult(element);
+
+        Assert.Contains("Found 1 element(s)", result);
+        Assert.Contains("PID: 1234", result);
+        Assert.Contains("Button [#99999]", result);
+        Assert.Contains("Name=\"CountButton\"", result);
+        Assert.Contains("Content=\"Click Me\"", result);
+        Assert.Contains("AutomationId=\"BtnCount\"", result);
+    }
+
+    [Fact]
+    public void FormatFindElementResult_Success_ZeroElements()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "matchCount": 0,
+            "elements": []
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatFindElementResult(element);
+
+        Assert.Contains("Found 0 element(s)", result);
+    }
+
+    [Fact]
+    public void FormatFindElementResult_Success_MultipleElements()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 5678,
+            "matchCount": 2,
+            "elements": [
+                {
+                    "type": "System.Windows.Controls.Button",
+                    "hashCode": 111,
+                    "name": "Btn1",
+                    "content": "OK"
+                },
+                {
+                    "type": "System.Windows.Controls.Button",
+                    "hashCode": 222,
+                    "name": "Btn2",
+                    "content": "Cancel"
+                }
+            ]
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatFindElementResult(element);
+
+        Assert.Contains("Found 2 element(s)", result);
+        Assert.Contains("Button [#111]", result);
+        Assert.Contains("Name=\"Btn1\"", result);
+        Assert.Contains("Button [#222]", result);
+        Assert.Contains("Name=\"Btn2\"", result);
+    }
+
+    [Fact]
+    public void FormatFindElementResult_Failure_ShowsError()
+    {
+        var json = """
+        {
+            "success": false,
+            "error": "Something went wrong"
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatFindElementResult(element);
+
+        Assert.Equal("Failed: Something went wrong", result);
+    }
+
+    [Fact]
+    public void FormatFindElementResult_HashcodeFallback_LowercaseKey()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "matchCount": 1,
+            "elements": [
+                {
+                    "type": "System.Windows.Controls.TextBox",
+                    "hashcode": 55555,
+                    "name": "InputField"
+                }
+            ]
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatFindElementResult(element);
+
+        Assert.Contains("TextBox [#55555]", result);
+    }
+
+    [Fact]
+    public void FormatFindElementResult_NullOptionalFields_OmitsNullValues()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "matchCount": 1,
+            "elements": [
+                {
+                    "type": "System.Windows.Controls.Grid",
+                    "hashCode": 12345,
+                    "name": null,
+                    "content": null,
+                    "automationId": null
+                }
+            ]
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatFindElementResult(element);
+
+        Assert.Contains("Grid [#12345]", result);
+        Assert.DoesNotContain("Name=", result);
+        Assert.DoesNotContain("Content=", result);
+        Assert.DoesNotContain("AutomationId=", result);
+    }
+
+    // --- FormatWindowsList tests ---
+
+    [Fact]
+    public void FormatWindowsList_Success_SingleWindow()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "windowCount": 1,
+            "windows": [
+                {
+                    "index": 0,
+                    "type": "MyApp.MainWindow",
+                    "hashCode": 12345,
+                    "title": "Main Window",
+                    "width": 800,
+                    "height": 600,
+                    "isVisible": true,
+                    "isActive": true
+                }
+            ]
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatWindowsList(element);
+
+        Assert.Contains("1 window(s)", result);
+        Assert.Contains("PID: 1234", result);
+        Assert.Contains("[0] MainWindow", result);
+        Assert.Contains("\"Main Window\"", result);
+        Assert.Contains("800x600", result);
+        Assert.Contains("visible", result);
+        Assert.Contains("active", result);
+    }
+
+    [Fact]
+    public void FormatWindowsList_Success_ZeroWindows()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "windowCount": 0,
+            "windows": []
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatWindowsList(element);
+
+        Assert.Contains("0 window(s)", result);
+    }
+
+    [Fact]
+    public void FormatWindowsList_Success_MultipleWindows()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 9999,
+            "windowCount": 2,
+            "windows": [
+                {
+                    "index": 0,
+                    "type": "MyApp.MainWindow",
+                    "title": "Main",
+                    "width": 1024,
+                    "height": 768,
+                    "isVisible": true,
+                    "isActive": true
+                },
+                {
+                    "index": 1,
+                    "type": "MyApp.SettingsWindow",
+                    "title": "Settings",
+                    "width": 400,
+                    "height": 300,
+                    "isVisible": true,
+                    "isActive": false
+                }
+            ]
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatWindowsList(element);
+
+        Assert.Contains("2 window(s)", result);
+        Assert.Contains("[0] MainWindow", result);
+        Assert.Contains("[1] SettingsWindow", result);
+        Assert.Contains("inactive", result);
+    }
+
+    [Fact]
+    public void FormatWindowsList_HiddenWindow_ShowsHidden()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "windowCount": 1,
+            "windows": [
+                {
+                    "index": 0,
+                    "type": "MyApp.HiddenWindow",
+                    "title": "",
+                    "width": 0,
+                    "height": 0,
+                    "isVisible": false,
+                    "isActive": false
+                }
+            ]
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatWindowsList(element);
+
+        Assert.Contains("hidden", result);
+        Assert.Contains("inactive", result);
+    }
+
+    [Fact]
+    public void FormatWindowsList_Failure_ShowsError()
+    {
+        var json = """
+        {
+            "success": false,
+            "error": "Access denied"
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatWindowsList(element);
+
+        Assert.Equal("Failed: Access denied", result);
+    }
 }

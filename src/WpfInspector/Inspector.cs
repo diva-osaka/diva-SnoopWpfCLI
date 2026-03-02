@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Reflection;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -193,7 +194,16 @@ namespace SnoopWpfCLI.WpfInspector
                     
                     case "GET_VISUAL_TREE_BY_HASHCODE":
                         return ProcessGetVisualTreeByHashcodeCommand(root);
-                    
+
+                    case "LIST_WINDOWS":
+                        return ProcessListWindowsCommand();
+
+                    case "GET_DATACONTEXT":
+                        return ProcessGetDataContextCommand(root);
+
+                    case "FIND_ELEMENT":
+                        return ProcessFindElementCommand(root);
+
                     default:
                         return JsonSerializer.Serialize(new { success = false, error = $"Unknown command: {command}" }, GetJsonOptions());
                 }
@@ -1395,6 +1405,529 @@ namespace SnoopWpfCLI.WpfInspector
             catch
             {
                 return value?.ToString();
+            }
+        }
+
+        private static string ProcessListWindowsCommand()
+        {
+            try
+            {
+                LogMessage("Processing LIST_WINDOWS command");
+
+                object? result = null;
+                Exception? dispatcherException = null;
+
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    try
+                    {
+                        var windows = new List<object>();
+                        var activeWindow = Application.Current.Windows.Cast<Window>()
+                            .FirstOrDefault(w => w.IsActive);
+
+                        for (int i = 0; i < Application.Current.Windows.Count; i++)
+                        {
+                            var window = Application.Current.Windows[i];
+                            windows.Add(new
+                            {
+                                index = i,
+                                type = window.GetType().FullName ?? window.GetType().Name,
+                                hashCode = window.GetHashCode(),
+                                title = window.Title ?? "",
+                                width = window.ActualWidth,
+                                height = window.ActualHeight,
+                                isVisible = window.IsVisible,
+                                isActive = ReferenceEquals(window, activeWindow)
+                            });
+                        }
+
+                        result = new
+                        {
+                            success = true,
+                            processId = System.Diagnostics.Process.GetCurrentProcess().Id,
+                            windowCount = windows.Count,
+                            windows = windows
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        dispatcherException = ex;
+                        LogMessage($"Error in Dispatcher.Invoke for list windows: {ex.Message}");
+                    }
+                });
+
+                if (dispatcherException != null)
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        success = false,
+                        error = $"Error accessing UI thread: {dispatcherException.Message}"
+                    }, GetJsonOptions());
+                }
+
+                if (result == null)
+                {
+                    return JsonSerializer.Serialize(new
+                    {
+                        success = false,
+                        error = "Failed to list windows - no result returned"
+                    }, GetJsonOptions());
+                }
+
+                return JsonSerializer.Serialize(result, GetJsonOptions());
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error in ProcessListWindowsCommand: {ex.Message}");
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = $"Error listing windows: {ex.Message}"
+                }, GetJsonOptions());
+            }
+        }
+
+        private static string ProcessGetDataContextCommand(JsonElement commandElement)
+        {
+            try
+            {
+                LogMessage("Processing GET_DATACONTEXT command");
+
+                if (!commandElement.TryGetProperty("type", out var typeElement))
+                {
+                    return JsonSerializer.Serialize(new { success = false, error = "Missing 'type' parameter" }, GetJsonOptions());
+                }
+
+                if (!commandElement.TryGetProperty("hashcode", out var hashcodeElement))
+                {
+                    return JsonSerializer.Serialize(new { success = false, error = "Missing 'hashcode' parameter" }, GetJsonOptions());
+                }
+
+                var typeName = typeElement.GetString();
+                var hashcode = hashcodeElement.GetInt32();
+
+                if (string.IsNullOrWhiteSpace(typeName))
+                {
+                    return JsonSerializer.Serialize(new { success = false, error = "type cannot be empty" }, GetJsonOptions());
+                }
+
+                string? propertyFilter = null;
+                if (commandElement.TryGetProperty("property", out var propertyElement))
+                {
+                    propertyFilter = propertyElement.GetString();
+                }
+
+                LogMessage($"Looking for element DataContext with type: {typeName}, hashcode: {hashcode}, property: {propertyFilter ?? "(all)"}");
+
+                object? result = null;
+                Exception? dispatcherException = null;
+
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    try
+                    {
+                        var targetObject = FindObjectByTypeAndHashCode(typeName, hashcode);
+
+                        if (targetObject == null)
+                        {
+                            LogMessage($"Element not found - Type: {typeName}, HashCode: {hashcode}");
+                            result = new
+                            {
+                                success = false,
+                                error = $"{typeName} with hashcode {hashcode} not found in any window"
+                            };
+                            return;
+                        }
+
+                        if (targetObject is not FrameworkElement frameworkElement)
+                        {
+                            LogMessage($"Found object is not a FrameworkElement - Type: {targetObject.GetType().Name}");
+                            result = new
+                            {
+                                success = false,
+                                error = $"Found object with hashcode {hashcode} is not a FrameworkElement (cannot have DataContext)"
+                            };
+                            return;
+                        }
+
+                        var dataContext = frameworkElement.DataContext;
+
+                        if (dataContext == null)
+                        {
+                            result = new
+                            {
+                                success = true,
+                                message = "Element has no DataContext",
+                                processId = System.Diagnostics.Process.GetCurrentProcess().Id,
+                                elementType = typeName,
+                                elementHashcode = hashcode,
+                                hasDataContext = false
+                            };
+                            return;
+                        }
+
+                        var dcInfo = new Dictionary<string, object>
+                        {
+                            ["type"] = dataContext.GetType().FullName ?? dataContext.GetType().Name,
+                            ["hashCode"] = dataContext.GetHashCode()
+                        };
+
+                        var properties = new Dictionary<string, object>();
+                        var dcType = dataContext.GetType();
+
+                        try
+                        {
+                            var propertyInfos = dcType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+                            foreach (var propertyInfo in propertyInfos)
+                            {
+                                try
+                                {
+                                    if (propertyFilter != null && !propertyInfo.Name.Equals(propertyFilter, StringComparison.OrdinalIgnoreCase))
+                                        continue;
+
+                                    if (propertyInfo.GetIndexParameters().Length > 0)
+                                        continue;
+
+                                    var propertyData = new Dictionary<string, object>();
+                                    propertyData["propertyType"] = propertyInfo.PropertyType.Name;
+
+                                    if (propertyInfo.PropertyType.IsGenericType)
+                                    {
+                                        propertyData["propertyType"] = propertyInfo.PropertyType.GetGenericTypeDefinition().Name.Replace("`1", "") +
+                                            "<" + string.Join(", ", propertyInfo.PropertyType.GetGenericArguments().Select(t => t.Name)) + ">";
+                                    }
+
+                                    propertyData["isReadOnly"] = !propertyInfo.CanWrite || propertyInfo.SetMethod == null || !propertyInfo.SetMethod.IsPublic;
+
+                                    if (propertyInfo.CanRead && propertyInfo.GetMethod != null && propertyInfo.GetMethod.IsPublic)
+                                    {
+                                        try
+                                        {
+                                            var value = propertyInfo.GetValue(dataContext);
+                                            propertyData["value"] = SerializeDataContextValue(value);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            propertyData["error"] = ex.Message;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        propertyData["error"] = "Property is not readable";
+                                    }
+
+                                    properties[propertyInfo.Name] = propertyData;
+                                }
+                                catch (Exception ex)
+                                {
+                                    properties[propertyInfo.Name] = new Dictionary<string, object>
+                                    {
+                                        ["error"] = ex.Message,
+                                        ["isReadOnly"] = true
+                                    };
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            dcInfo["reflectionError"] = ex.Message;
+                        }
+
+                        if (properties.Count > 0)
+                        {
+                            dcInfo["properties"] = properties;
+                        }
+
+                        result = new
+                        {
+                            success = true,
+                            message = "DataContext retrieved successfully",
+                            processId = System.Diagnostics.Process.GetCurrentProcess().Id,
+                            elementType = typeName,
+                            elementHashcode = hashcode,
+                            hasDataContext = true,
+                            dataContext = dcInfo
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        dispatcherException = ex;
+                        LogMessage($"Error in Dispatcher.Invoke for DataContext retrieval: {ex.Message}");
+                    }
+                });
+
+                if (dispatcherException != null)
+                {
+                    return JsonSerializer.Serialize(new { success = false, error = $"Error accessing UI thread: {dispatcherException.Message}" }, GetJsonOptions());
+                }
+
+                if (result == null)
+                {
+                    return JsonSerializer.Serialize(new { success = false, error = "Failed to get DataContext - no result returned" }, GetJsonOptions());
+                }
+
+                return JsonSerializer.Serialize(result, GetJsonOptions());
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error in ProcessGetDataContextCommand: {ex.Message}");
+                return JsonSerializer.Serialize(new { success = false, error = $"Error getting DataContext: {ex.Message}" }, GetJsonOptions());
+            }
+        }
+
+        private static string ProcessFindElementCommand(JsonElement commandElement)
+        {
+            try
+            {
+                LogMessage("Processing FIND_ELEMENT command");
+
+                string? name = commandElement.TryGetProperty("name", out var nameElement) ? nameElement.GetString() : null;
+                string? text = commandElement.TryGetProperty("text", out var textElement) ? textElement.GetString() : null;
+                string? automationId = commandElement.TryGetProperty("automationId", out var autoIdElement) ? autoIdElement.GetString() : null;
+                string? typeName = commandElement.TryGetProperty("type", out var typeElement) ? typeElement.GetString() : null;
+                string? bindingPath = commandElement.TryGetProperty("bindingPath", out var bindingPathElement) ? bindingPathElement.GetString() : null;
+
+                LogMessage($"Search criteria - name: '{name}', text: '{text}', automationId: '{automationId}', type: '{typeName}', bindingPath: '{bindingPath}'");
+
+                object? result = null;
+                Exception? dispatcherException = null;
+
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    try
+                    {
+                        var matchingElements = new List<object>();
+
+                        var allElements = GetAllWpfControls()
+                            .SelectMany(GetChildrenRecursive)
+                            .OfType<DependencyObject>();
+
+                        foreach (var element in allElements)
+                        {
+                            var elementType = element.GetType();
+                            var elementTypeName = elementType.FullName ?? elementType.Name;
+
+                            // Type filter
+                            if (!string.IsNullOrEmpty(typeName) && !elementTypeName.Equals(typeName, StringComparison.OrdinalIgnoreCase))
+                                continue;
+
+                            // Name filter
+                            if (!string.IsNullOrEmpty(name))
+                            {
+                                if (element is FrameworkElement fe)
+                                {
+                                    if (string.IsNullOrEmpty(fe.Name) || !fe.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                                        continue;
+                                }
+                                else
+                                {
+                                    continue;
+                                }
+                            }
+
+                            // Text/Content filter (partial match)
+                            if (!string.IsNullOrEmpty(text))
+                            {
+                                var contentStr = GetElementContentText(element);
+                                if (contentStr == null || !contentStr.Contains(text, StringComparison.OrdinalIgnoreCase))
+                                    continue;
+                            }
+
+                            // AutomationId filter
+                            if (!string.IsNullOrEmpty(automationId))
+                            {
+                                if (element is UIElement uiElem)
+                                {
+                                    var autoId = System.Windows.Automation.AutomationProperties.GetAutomationId(uiElem);
+                                    if (string.IsNullOrEmpty(autoId) || !autoId.Equals(automationId, StringComparison.OrdinalIgnoreCase))
+                                        continue;
+                                }
+                                else
+                                {
+                                    continue;
+                                }
+                            }
+
+                            // Binding path filter
+                            if (!string.IsNullOrEmpty(bindingPath))
+                            {
+                                if (!HasBindingWithPath(element, bindingPath))
+                                    continue;
+                            }
+
+                            // Element passed all filters - collect info
+                            var elementName = (element is FrameworkElement fwe) ? (string.IsNullOrEmpty(fwe.Name) ? null : fwe.Name) : null;
+                            var elementContent = GetElementContentText(element);
+                            var elementAutoId = (element is UIElement ui) ? System.Windows.Automation.AutomationProperties.GetAutomationId(ui) : null;
+
+                            matchingElements.Add(new
+                            {
+                                type = elementTypeName,
+                                hashCode = element.GetHashCode(),
+                                name = elementName,
+                                content = elementContent,
+                                automationId = string.IsNullOrEmpty(elementAutoId) ? null : elementAutoId
+                            });
+                        }
+
+                        result = new
+                        {
+                            success = true,
+                            processId = System.Diagnostics.Process.GetCurrentProcess().Id,
+                            message = $"Found {matchingElements.Count} matching element(s)",
+                            matchCount = matchingElements.Count,
+                            elements = matchingElements
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        dispatcherException = ex;
+                        LogMessage($"Error in Dispatcher.Invoke for find element: {ex.Message}");
+                    }
+                });
+
+                if (dispatcherException != null)
+                {
+                    return JsonSerializer.Serialize(new { success = false, error = $"Error accessing UI thread: {dispatcherException.Message}" }, GetJsonOptions());
+                }
+
+                if (result == null)
+                {
+                    return JsonSerializer.Serialize(new { success = false, error = "Failed to find elements - no result returned" }, GetJsonOptions());
+                }
+
+                return JsonSerializer.Serialize(result, GetJsonOptions());
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error in ProcessFindElementCommand: {ex.Message}");
+                return JsonSerializer.Serialize(new { success = false, error = $"Error finding elements: {ex.Message}" }, GetJsonOptions());
+            }
+        }
+
+        private static string? GetElementContentText(DependencyObject element)
+        {
+            try
+            {
+                if (element is ContentControl cc && cc.Content != null)
+                {
+                    return cc.Content.ToString();
+                }
+
+                if (element is TextBlock tb)
+                {
+                    return tb.Text;
+                }
+
+                if (element is TextBox txb)
+                {
+                    return txb.Text;
+                }
+
+                if (element is HeaderedContentControl hcc && hcc.Header != null)
+                {
+                    return hcc.Header.ToString();
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error in GetElementContentText: {ex.Message}");
+                return null;
+            }
+        }
+
+        private static object? SerializeDataContextValue(object? value)
+        {
+            try
+            {
+                return value switch
+                {
+                    null => null,
+                    string s => s,
+                    bool b => b,
+                    int i => i,
+                    double d => d,
+                    float f => f,
+                    long l => l,
+                    decimal dec => dec,
+                    DateTime dt => dt.ToString("yyyy-MM-dd HH:mm:ss"),
+                    TimeSpan ts => ts.ToString(),
+                    Enum e => e.ToString(),
+                    Type t => t.FullName ?? t.Name,
+                    System.Collections.ICollection col => $"[Collection: {col.Count} items]",
+                    System.Collections.IEnumerable enumerable => SerializeEnumerableCount(enumerable),
+                    _ when value.GetType().IsPrimitive || value.GetType().IsValueType => value,
+                    _ => value.GetType().Name
+                };
+            }
+            catch
+            {
+                return value?.GetType().Name;
+            }
+        }
+
+        private static string SerializeEnumerableCount(System.Collections.IEnumerable enumerable)
+        {
+            try
+            {
+                // Prefer ICollection.Count to avoid full enumeration on UI thread
+                if (enumerable is System.Collections.ICollection col)
+                {
+                    return $"[Collection: {col.Count} items]";
+                }
+
+                // Try Count property via reflection for IReadOnlyCollection<T> etc.
+                var countProperty = enumerable.GetType().GetProperty("Count", BindingFlags.Public | BindingFlags.Instance);
+                if (countProperty?.PropertyType == typeof(int) && countProperty.GetValue(enumerable) is int count)
+                {
+                    return $"[Collection: {count} items]";
+                }
+
+                return "[Collection: IEnumerable]";
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error in SerializeEnumerableCount: {ex.Message}");
+                return "[Collection]";
+            }
+        }
+
+        private static bool HasBindingWithPath(DependencyObject element, string bindingPath)
+        {
+            try
+            {
+                var dpProperties = DependencyPropertyCache.GetDependencyProperties(element.GetType());
+
+                foreach (var dp in dpProperties)
+                {
+                    try
+                    {
+                        var bindingExpression = BindingOperations.GetBindingExpression(element, dp);
+                        if (bindingExpression?.ParentBinding?.Path?.Path != null)
+                        {
+                            var path = bindingExpression.ParentBinding.Path.Path;
+                            if (path.Equals(bindingPath, StringComparison.OrdinalIgnoreCase) ||
+                                path.EndsWith("." + bindingPath, StringComparison.OrdinalIgnoreCase))
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LogMessage($"Error checking binding on {dp.Name}: {ex.Message}");
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error in HasBindingWithPath: {ex.Message}");
+                return false;
             }
         }
 
