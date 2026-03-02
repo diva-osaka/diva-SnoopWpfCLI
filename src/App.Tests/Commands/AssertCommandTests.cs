@@ -193,4 +193,37 @@ public class AssertCommandTests
         var result = root.Parse("assert --pid 1234 --name MyElement --property IsActive --expected true");
         Assert.Equal(0, result.Errors.Count);
     }
+
+    [Fact]
+    public void Parse_WithTextAndPropertyAndExpected_NoErrors()
+    {
+        var command = AssertCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("assert --pid 1234 --text \"Status\" --property IsActive --expected true");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
+    [Fact]
+    public void Parse_WithTextExistsAssertion_NoErrors()
+    {
+        var command = AssertCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("assert --pid 1234 --text \"Loading complete\" --exists");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
+    [Fact]
+    public void Parse_WithPropertyAndEmptyExpected_NoErrors()
+    {
+        var command = AssertCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("assert --pid 1234 --name MyElement --property Status --expected \"\"");
+        Assert.Equal(0, result.Errors.Count);
+    }
 }

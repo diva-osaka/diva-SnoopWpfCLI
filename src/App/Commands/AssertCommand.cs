@@ -134,7 +134,7 @@ public static class AssertCommand
                 // Mode 3: --property + --expected assertion (assert DataContext property value)
                 if (!string.IsNullOrEmpty(property) && expected is not null)
                 {
-                    return await AssertProperty(service, pid, name, automationId, type, hash, property, expected, format);
+                    return await AssertProperty(service, pid, name, text, automationId, type, hash, property, expected, format);
                 }
 
                 CommandHelpers.WriteError(
@@ -236,7 +236,7 @@ public static class AssertCommand
     }
 
     private static async Task<int> AssertProperty(
-        InjectionService service, int pid, string? name,
+        InjectionService service, int pid, string? name, string? text,
         string? automationId, string? type, int? hash,
         string property, string expected, string? format)
     {
@@ -251,7 +251,7 @@ public static class AssertCommand
         }
         else
         {
-            var findResult = await service.FindElementAsync(pid, name, null, automationId, type);
+            var findResult = await service.FindElementAsync(pid, name, text, automationId, type);
             if (!findResult.Success)
             {
                 CommandHelpers.WriteError(
@@ -271,6 +271,13 @@ public static class AssertCommand
                     Message = "Element not found for property assertion"
                 };
                 CommandHelpers.WriteResult(notFoundResult, format);
+                return ExitCodes.GeneralError;
+            }
+            if (findResult.MatchCount > 1)
+            {
+                CommandHelpers.WriteError(
+                    new { success = false, processId = pid, error = $"Multiple elements matched ({findResult.MatchCount}). Refine selector with --name/--automationid/--type+--hash." },
+                    format);
                 return ExitCodes.GeneralError;
             }
             elementType = findResult.Elements[0].Type;
