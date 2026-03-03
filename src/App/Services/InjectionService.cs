@@ -280,25 +280,7 @@ public class InjectionService
                 };
             }
 
-            using var doc = JsonDocument.Parse(response);
-            var root = doc.RootElement;
-
-            var success = root.TryGetProperty("success", out var successElement) ? successElement.GetBoolean() : false;
-            var message = root.TryGetProperty("message", out var messageElement) ? messageElement.GetString() ?? "" : "";
-            var error = root.TryGetProperty("error", out var errorElement) ? errorElement.GetString() : null;
-            var result = root.TryGetProperty("result", out var resultElement) ? resultElement.GetRawText() : null;
-
-            return new AutomationPeerResult
-            {
-                Success = success,
-                ProcessId = processId,
-                Type = type,
-                Hashcode = hashcode,
-                Action = action,
-                Message = success ? (message ?? string.Empty) : (error ?? "Unknown error"),
-                Error = success ? null : (error ?? "Unknown error"),
-                Result = result
-            };
+            return ResponseParser.ParseAutomationPeerResponse(response, processId, type, hashcode, action);
         }
         catch (Exception ex)
         {

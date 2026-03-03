@@ -42,6 +42,11 @@ public static class AssertCommand
             Description = "Element hashcode (use with --type for specific element)"
         };
 
+        var bindingPathOption = new Option<string?>("--binding-path")
+        {
+            Description = "Binding path to search for"
+        };
+
         var existsOption = new Option<bool>("--exists")
         {
             Description = "Assert that the element exists"
@@ -76,6 +81,7 @@ public static class AssertCommand
         command.Options.Add(automationIdOption);
         command.Options.Add(typeOption);
         command.Options.Add(hashOption);
+        command.Options.Add(bindingPathOption);
         command.Options.Add(existsOption);
         command.Options.Add(propertyOption);
         command.Options.Add(expectedOption);
@@ -85,11 +91,12 @@ public static class AssertCommand
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var pid = parseResult.GetValue(pidOption);
-            var name = parseResult.GetValue(nameOption);
-            var text = parseResult.GetValue(textOption);
-            var automationId = parseResult.GetValue(automationIdOption);
-            var type = parseResult.GetValue(typeOption);
+            var name = parseResult.GetValue(nameOption)?.Trim() is { Length: > 0 } n ? n : null;
+            var text = parseResult.GetValue(textOption)?.Trim() is { Length: > 0 } tx ? tx : null;
+            var automationId = parseResult.GetValue(automationIdOption)?.Trim() is { Length: > 0 } aid ? aid : null;
+            var type = parseResult.GetValue(typeOption)?.Trim() is { Length: > 0 } tp ? tp : null;
             var hash = parseResult.GetValue(hashOption);
+            var bindingPath = parseResult.GetValue(bindingPathOption)?.Trim() is { Length: > 0 } bp ? bp : null;
             var exists = parseResult.GetValue(existsOption);
             var property = parseResult.GetValue(propertyOption);
             var expected = parseResult.GetValue(expectedOption);
@@ -100,18 +107,18 @@ public static class AssertCommand
             try
             {
                 // Validate: need at least one search criterion
-                if (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(text)
-                    && string.IsNullOrEmpty(automationId)
-                    && (string.IsNullOrEmpty(type) || !hash.HasValue))
+                if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(text)
+                    && string.IsNullOrWhiteSpace(automationId) && string.IsNullOrWhiteSpace(bindingPath)
+                    && (string.IsNullOrWhiteSpace(type) || !hash.HasValue))
                 {
                     CommandHelpers.WriteError(
-                        new { success = false, processId = pid, error = "At least --name, --text, --automationid, or both --type and --hash are required" },
+                        new { success = false, processId = pid, error = "At least --name, --text, --automationid, --binding-path, or both --type and --hash are required" },
                         format);
                     return ExitCodes.GeneralError;
                 }
 
                 // Validate: need at least one assertion mode
-                if (!exists && string.IsNullOrEmpty(text) && string.IsNullOrEmpty(property))
+                if (!exists && string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(property))
                 {
                     CommandHelpers.WriteError(
                         new { success = false, processId = pid, error = "At least one assertion (--exists, --text, or --property with --expected) is required" },
@@ -120,7 +127,7 @@ public static class AssertCommand
                 }
 
                 // Validate: --exists and --property are mutually exclusive
-                if (exists && !string.IsNullOrEmpty(property))
+                if (exists && !string.IsNullOrWhiteSpace(property))
                 {
                     CommandHelpers.WriteError(
                         new { success = false, processId = pid, error = "--exists and --property are mutually exclusive. Use --exists to check element presence, or --property with --expected to check a DataContext value." },
@@ -131,19 +138,19 @@ public static class AssertCommand
                 // Mode 1: --exists assertion
                 if (exists)
                 {
-                    return await AssertExists(service, pid, name, text, automationId, type, format);
+                    return await AssertExists(service, pid, name, text, automationId, type, bindingPath, format);
                 }
 
                 // Mode 2: --text assertion (assert element text equals expected)
-                if (!string.IsNullOrEmpty(text) && string.IsNullOrEmpty(property))
+                if (!string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(property))
                 {
-                    return await AssertText(service, pid, name, text, automationId, type, format);
+                    return await AssertText(service, pid, name, text, automationId, type, bindingPath, format);
                 }
 
                 // Mode 3: --property + --expected assertion (assert DataContext property value)
-                if (!string.IsNullOrEmpty(property) && expected is not null)
+                if (!string.IsNullOrWhiteSpace(property) && expected is not null)
                 {
-                    return await AssertProperty(service, pid, name, text, automationId, type, hash, property, expected, format);
+                    return await AssertProperty(service, pid, name, text, automationId, type, hash, bindingPath, property, expected, format);
                 }
 
                 CommandHelpers.WriteError(
@@ -168,9 +175,9 @@ public static class AssertCommand
 
     private static async Task<int> AssertExists(
         InjectionService service, int pid, string? name, string? text,
-        string? automationId, string? type, string? format)
+        string? automationId, string? type, string? bindingPath, string? format)
     {
-        var findResult = await service.FindElementAsync(pid, name, text, automationId, type);
+        var findResult = await service.FindElementAsync(pid, name, text, automationId, type, bindingPath);
 
         if (!findResult.Success)
         {
@@ -199,9 +206,9 @@ public static class AssertCommand
 
     private static async Task<int> AssertText(
         InjectionService service, int pid, string? name, string text,
-        string? automationId, string? type, string? format)
+        string? automationId, string? type, string? bindingPath, string? format)
     {
-        var findResult = await service.FindElementAsync(pid, name, text, automationId, type);
+        var findResult = await service.FindElementAsync(pid, name, text, automationId, type, bindingPath);
 
         if (!findResult.Success)
         {
@@ -246,21 +253,21 @@ public static class AssertCommand
 
     private static async Task<int> AssertProperty(
         InjectionService service, int pid, string? name, string? text,
-        string? automationId, string? type, int? hash,
+        string? automationId, string? type, int? hash, string? bindingPath,
         string property, string expected, string? format)
     {
         // First find the element
         string elementType;
         int elementHash;
 
-        if (!string.IsNullOrEmpty(type) && hash.HasValue)
+        if (!string.IsNullOrWhiteSpace(type) && hash.HasValue)
         {
             elementType = type;
             elementHash = hash.Value;
         }
         else
         {
-            var findResult = await service.FindElementAsync(pid, name, text, automationId, type);
+            var findResult = await service.FindElementAsync(pid, name, text, automationId, type, bindingPath);
             if (!findResult.Success)
             {
                 CommandHelpers.WriteError(

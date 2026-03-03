@@ -41,13 +41,15 @@ snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--verbose]
 ### get-subtree
 
 ```bash
-snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--format tree] [--verbose]
+snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --text <TEXT> | --binding-path <PATH> | --type <TYPE> --hash <HASHCODE>) [--format tree] [--verbose]
 ```
 
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--pid` | Yes | Target process ID |
 | `--name` | No | Element name (x:Name). Alternative to `--type`/`--hash` |
+| `--text` | No | Element text/content to search for. Alternative to `--name` or `--type`/`--hash` |
+| `--binding-path` | No | Binding path to search for. Alternative to `--name`, `--text`, or `--type`/`--hash` |
 | `--type` | No | Fully-qualified element type |
 | `--hash` | No | Element hashcode |
 | `--format tree` | No | Human-readable tree |
@@ -91,13 +93,15 @@ At least one search criterion is required.
 ### invoke
 
 ```bash
-snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) --action <ACTION> [--params <JSON>] [--verbose]
+snoopwpfcli invoke --pid <PID> (--name <NAME> | --text <TEXT> | --binding-path <PATH> | --type <TYPE> --hash <HASHCODE>) --action <ACTION> [--params <JSON>] [--verbose]
 ```
 
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--pid` | Yes | Target process ID |
 | `--name` | No | Element name (x:Name). Alternative to `--type`/`--hash` |
+| `--text` | No | Element text/content to search for. Alternative to `--name` or `--type`/`--hash` |
+| `--binding-path` | No | Binding path to search for. Alternative to `--name`, `--text`, or `--type`/`--hash` |
 | `--type` | No | Fully-qualified element type |
 | `--hash` | No | Element hashcode |
 | `--action` | Yes | Automation peer action name |
@@ -163,14 +167,17 @@ snoopwpfcli list-windows --pid <PID> [--format json|tree] [--verbose]
 ### get-datacontext
 
 ```bash
-snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASHCODE> [--property <NAME>] [--verbose]
+snoopwpfcli get-datacontext --pid <PID> (--name <NAME> | --text <TEXT> | --binding-path <PATH> | --type <TYPE> --hash <HASHCODE>) [--property <NAME>] [--verbose]
 ```
 
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--pid` | Yes | Target process ID |
-| `--type` | Yes | Fully-qualified element type |
-| `--hash` | Yes | Element hashcode |
+| `--name` | No | Element name (x:Name). Alternative to `--type`/`--hash` |
+| `--text` | No | Element text/content to search for. Alternative to `--name` or `--type`/`--hash` |
+| `--binding-path` | No | Binding path to search for. Alternative to `--name`, `--text`, or `--type`/`--hash` |
+| `--type` | No | Fully-qualified element type |
+| `--hash` | No | Element hashcode |
 | `--property` | No | Return only a specific property |
 | `--verbose` | No | Enable verbose output |
 

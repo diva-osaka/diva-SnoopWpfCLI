@@ -75,11 +75,11 @@ public static class FindElementCommand
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var pid = parseResult.GetValue(pidOption);
-            var name = parseResult.GetValue(nameOption);
-            var text = parseResult.GetValue(textOption);
-            var automationId = parseResult.GetValue(automationIdOption);
-            var type = parseResult.GetValue(typeOption);
-            var bindingPath = parseResult.GetValue(bindingPathOption);
+            var name = parseResult.GetValue(nameOption)?.Trim() is { Length: > 0 } n ? n : null;
+            var text = parseResult.GetValue(textOption)?.Trim() is { Length: > 0 } tx ? tx : null;
+            var automationId = parseResult.GetValue(automationIdOption)?.Trim() is { Length: > 0 } aid ? aid : null;
+            var type = parseResult.GetValue(typeOption)?.Trim() is { Length: > 0 } t ? t : null;
+            var bindingPath = parseResult.GetValue(bindingPathOption)?.Trim() is { Length: > 0 } bp ? bp : null;
             var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
             var interactiveOnly = parseResult.GetValue(interactiveOnlyOption);
@@ -87,9 +87,9 @@ public static class FindElementCommand
 
             try
             {
-                if (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(text)
-                    && string.IsNullOrEmpty(automationId) && string.IsNullOrEmpty(type)
-                    && string.IsNullOrEmpty(bindingPath))
+                if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(text)
+                    && string.IsNullOrWhiteSpace(automationId) && string.IsNullOrWhiteSpace(type)
+                    && string.IsNullOrWhiteSpace(bindingPath))
                 {
                     CommandHelpers.WriteError(
                         new { success = false, processId = pid, error = "At least one search criterion (--name, --text, --automationid, --type, or --binding-path) is required" },

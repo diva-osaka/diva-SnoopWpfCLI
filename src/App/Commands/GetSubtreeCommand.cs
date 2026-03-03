@@ -19,17 +19,27 @@ public static class GetSubtreeCommand
 
         var typeOption = new Option<string?>("--type")
         {
-            Description = "Element type name (required unless --name is specified)"
+            Description = "Element type name (required unless --name, --text, or --binding-path is specified)"
         };
 
         var hashOption = new Option<int?>("--hash")
         {
-            Description = "Element hashcode (required unless --name is specified)"
+            Description = "Element hashcode (required unless --name, --text, or --binding-path is specified)"
         };
 
         var nameOption = new Option<string?>("--name")
         {
             Description = "Element name (x:Name) - resolves type and hash automatically"
+        };
+
+        var textOption = new Option<string?>("--text")
+        {
+            Description = "Element text/content to search for"
+        };
+
+        var bindingPathOption = new Option<string?>("--binding-path")
+        {
+            Description = "Binding path to search for"
         };
 
         var formatOption = new Option<string>("--format")
@@ -49,25 +59,67 @@ public static class GetSubtreeCommand
         command.Options.Add(typeOption);
         command.Options.Add(hashOption);
         command.Options.Add(nameOption);
+        command.Options.Add(textOption);
+        command.Options.Add(bindingPathOption);
         command.Options.Add(formatOption);
         command.Options.Add(verboseOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var pid = parseResult.GetValue(pidOption);
-            var type = parseResult.GetValue(typeOption);
+            var type = parseResult.GetValue(typeOption)?.Trim() is { Length: > 0 } t ? t : null;
             var hashNullable = parseResult.GetValue(hashOption);
-            var name = parseResult.GetValue(nameOption);
+            var name = parseResult.GetValue(nameOption)?.Trim() is { Length: > 0 } n ? n : null;
+            var text = parseResult.GetValue(textOption)?.Trim() is { Length: > 0 } tx ? tx : null;
+            var bindingPath = parseResult.GetValue(bindingPathOption)?.Trim() is { Length: > 0 } bp ? bp : null;
             var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
             var service = new InjectionService(verbose);
 
             try
             {
-                // Resolve type/hash from name if specified
-                if (!string.IsNullOrEmpty(name))
+                // Mutual exclusion: --name, --text, --binding-path, --type/--hash
+                if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(text))
                 {
-                    var findResult = await service.FindElementAsync(pid, name, null, null, null);
+                    var err = new { success = false, processId = pid, error = "Cannot specify both --name and --text" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+                if (!string.IsNullOrWhiteSpace(name) && (!string.IsNullOrWhiteSpace(type) || hashNullable.HasValue))
+                {
+                    var err = new { success = false, processId = pid, error = "Cannot specify --name with --type/--hash" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+                if (!string.IsNullOrWhiteSpace(text) && (!string.IsNullOrWhiteSpace(type) || hashNullable.HasValue))
+                {
+                    var err = new { success = false, processId = pid, error = "Cannot specify --text with --type/--hash" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+                if (!string.IsNullOrWhiteSpace(bindingPath) && !string.IsNullOrWhiteSpace(name))
+                {
+                    var err = new { success = false, processId = pid, error = "Cannot specify --binding-path with --name" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+                if (!string.IsNullOrWhiteSpace(bindingPath) && !string.IsNullOrWhiteSpace(text))
+                {
+                    var err = new { success = false, processId = pid, error = "Cannot specify --binding-path with --text" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+                if (!string.IsNullOrWhiteSpace(bindingPath) && hashNullable.HasValue)
+                {
+                    var err = new { success = false, processId = pid, error = "Cannot specify --binding-path with --hash" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+
+                // Resolve type/hash from name if specified
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    var findResult = await service.FindElementAsync(pid, name, null, null, null, null);
                     if (!findResult.Success)
                     {
                         var err = new { success = false, processId = pid, error = findResult.Error ?? "Element search failed" };
@@ -92,9 +144,65 @@ public static class GetSubtreeCommand
                     hashNullable = found.Hashcode;
                 }
 
-                if (string.IsNullOrEmpty(type) || !hashNullable.HasValue)
+                // Resolve type/hash from text if specified
+                if (!string.IsNullOrWhiteSpace(text))
                 {
-                    var err = new { success = false, processId = pid, error = "Either --name or both --type and --hash must be specified" };
+                    var findResult = await service.FindElementAsync(pid, null, text, null, null, null);
+                    if (!findResult.Success)
+                    {
+                        var err = new { success = false, processId = pid, error = findResult.Error ?? "Element search failed" };
+                        CommandHelpers.WriteError(err, format);
+                        return findResult.Error == ErrorMessages.ProcessNotFound
+                            ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+                    }
+                    if (findResult.Elements.Count == 0)
+                    {
+                        var err = new { success = false, processId = pid, error = $"Element with text '{text}' not found" };
+                        CommandHelpers.WriteError(err, format);
+                        return ExitCodes.GeneralError;
+                    }
+                    if (findResult.Elements.Count > 1)
+                    {
+                        var err = new { success = false, processId = pid, error = $"Multiple elements found with text '{text}'. Use a more specific text, or specify --type/--hash directly." };
+                        CommandHelpers.WriteError(err, format);
+                        return ExitCodes.GeneralError;
+                    }
+                    var found = findResult.Elements[0];
+                    type = found.Type;
+                    hashNullable = found.Hashcode;
+                }
+
+                // Resolve type/hash from binding-path if specified
+                if (!string.IsNullOrWhiteSpace(bindingPath))
+                {
+                    var findResult = await service.FindElementAsync(pid, null, null, null, type, bindingPath);
+                    if (!findResult.Success)
+                    {
+                        var err = new { success = false, processId = pid, error = findResult.Error ?? "Element search failed" };
+                        CommandHelpers.WriteError(err, format);
+                        return findResult.Error == ErrorMessages.ProcessNotFound
+                            ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+                    }
+                    if (findResult.Elements.Count == 0)
+                    {
+                        var err = new { success = false, processId = pid, error = $"Element with binding path '{bindingPath}' not found" };
+                        CommandHelpers.WriteError(err, format);
+                        return ExitCodes.GeneralError;
+                    }
+                    if (findResult.Elements.Count > 1)
+                    {
+                        var err = new { success = false, processId = pid, error = $"Multiple elements found with binding path '{bindingPath}'. Narrow with --type, or specify --type/--hash directly." };
+                        CommandHelpers.WriteError(err, format);
+                        return ExitCodes.GeneralError;
+                    }
+                    var found = findResult.Elements[0];
+                    type = found.Type;
+                    hashNullable = found.Hashcode;
+                }
+
+                if (string.IsNullOrWhiteSpace(type) || !hashNullable.HasValue)
+                {
+                    var err = new { success = false, processId = pid, error = "Either --name, --text, --binding-path, or both --type and --hash must be specified" };
                     CommandHelpers.WriteError(err, format);
                     return ExitCodes.GeneralError;
                 }
@@ -102,7 +210,7 @@ public static class GetSubtreeCommand
                 var hash = hashNullable.Value;
                 var result = await service.GetVisualTreeByHashcodeAsync(pid, type, hash);
 
-                if (format == "tree" && result.Success && !string.IsNullOrEmpty(result.VisualTreeJson))
+                if (format == "tree" && result.Success && !string.IsNullOrWhiteSpace(result.VisualTreeJson))
                 {
                     using var doc = JsonDocument.Parse(result.VisualTreeJson);
                     Console.WriteLine(TreeFormatter.FormatVisualTree(doc.RootElement));

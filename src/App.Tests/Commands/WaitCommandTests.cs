@@ -233,4 +233,26 @@ public class WaitCommandTests
         var result = root.Parse("wait --pid 1234 --name MyButton --interactive-only");
         Assert.Equal(0, result.Errors.Count);
     }
+
+    [Fact]
+    public void Parse_WithUntilEnabledAndType_NoErrors()
+    {
+        var command = WaitCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("wait --pid 1234 --name MyButton --type System.Windows.Controls.Button --until enabled --timeout 5000");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
+    [Fact]
+    public void Parse_WithUntilDisabledAndAutomationId_NoErrors()
+    {
+        var command = WaitCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("wait --pid 1234 --automationid BtnSave --until disabled");
+        Assert.Equal(0, result.Errors.Count);
+    }
 }

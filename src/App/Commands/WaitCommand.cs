@@ -94,10 +94,10 @@ public static class WaitCommand
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var pid = parseResult.GetValue(pidOption);
-            var name = parseResult.GetValue(nameOption);
-            var text = parseResult.GetValue(textOption);
-            var automationId = parseResult.GetValue(automationIdOption);
-            var type = parseResult.GetValue(typeOption);
+            var name = parseResult.GetValue(nameOption)?.Trim() is { Length: > 0 } n ? n : null;
+            var text = parseResult.GetValue(textOption)?.Trim() is { Length: > 0 } tx ? tx : null;
+            var automationId = parseResult.GetValue(automationIdOption)?.Trim() is { Length: > 0 } aid ? aid : null;
+            var type = parseResult.GetValue(typeOption)?.Trim() is { Length: > 0 } t ? t : null;
             var until = parseResult.GetValue(untilOption) ?? "found";
             var timeout = parseResult.GetValue(timeoutOption);
             var interval = parseResult.GetValue(intervalOption);
@@ -161,14 +161,26 @@ public static class WaitCommand
                                 {
                                     var elemJson = JsonSerializer.Serialize(elementDetail.Element);
                                     using var elemDoc = JsonDocument.Parse(elemJson);
+
+                                    // WPF default for IsEnabled is true.
+                                    // DLL returns only non-default values, so absence means enabled.
+                                    bool isEnabled = true;
                                     if (elemDoc.RootElement.TryGetProperty("IsEnabled", out var isEnabledProp))
                                     {
-                                        var isEnabled = isEnabledProp.ValueKind == JsonValueKind.True;
-                                        if ((until == "enabled" && isEnabled) || (until == "disabled" && !isEnabled))
+                                        isEnabled = isEnabledProp.ValueKind switch
                                         {
-                                            conditionMet = true;
-                                            matchedElement = element;
-                                        }
+                                            JsonValueKind.False => false,
+                                            JsonValueKind.True => true,
+                                            JsonValueKind.String => !string.Equals(isEnabledProp.GetString(), "false", StringComparison.OrdinalIgnoreCase),
+                                            JsonValueKind.Number => isEnabledProp.TryGetDouble(out var num) && num != 0,
+                                            _ => true
+                                        };
+                                    }
+
+                                    if ((until == "enabled" && isEnabled) || (until == "disabled" && !isEnabled))
+                                    {
+                                        conditionMet = true;
+                                        matchedElement = element;
                                     }
                                 }
                             }
