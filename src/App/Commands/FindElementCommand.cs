@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using SnoopWpfCLI.Formatters;
+using SnoopWpfCLI.Models;
 using SnoopWpfCLI.Services;
 
 namespace SnoopWpfCLI.Commands;
@@ -100,15 +101,8 @@ public static class FindElementCommand
 
                 if (interactiveOnly && result.Success && result.Elements != null)
                 {
-                    var interactiveTypes = new[]
-                    {
-                        "Button", "TextBox", "CheckBox", "ComboBox", "ListBox",
-                        "RadioButton", "Slider", "ToggleButton", "PasswordBox",
-                        "RichTextBox", "DatePicker", "Expander", "MenuItem",
-                        "TabItem", "TreeViewItem", "ListBoxItem", "ComboBoxItem"
-                    };
                     result.Elements = result.Elements
-                        .Where(e => interactiveTypes.Any(t => e.Type != null && e.Type.EndsWith(t)))
+                        .Where(e => WpfKnownTypes.InteractiveTypes.Any(t => e.Type != null && e.Type.EndsWith(t)))
                         .ToList();
                     result.MatchCount = result.Elements.Count;
                 }

@@ -277,7 +277,7 @@ snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>
 単一要素の詳細情報を取得します。
 
 ```bash
-snoopwpfcli get-element --pid <PID> (--name <NAME> | --text <TEXT> | --type <TYPE> --hash <HASH>) [--verbose]
+snoopwpfcli get-element --pid <PID> (--name <NAME> | --text <TEXT> | --type <TYPE> --hash <HASH>) [--format json|tree] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -287,6 +287,7 @@ snoopwpfcli get-element --pid <PID> (--name <NAME> | --text <TEXT> | --type <TYP
 | `--text` | いいえ | テキスト/コンテンツで検索。`--name` や `--type`/`--hash` の代替 |
 | `--type` | いいえ | 要素の完全修飾型名 |
 | `--hash` | いいえ | 要素のハッシュコード |
+| `--format` | いいえ | 出力形式: `json` または `tree` |
 | `--verbose` | いいえ | 詳細ログを出力 |
 
 ### find-element

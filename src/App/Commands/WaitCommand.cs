@@ -9,6 +9,7 @@ using SnoopWpfCLI.Formatters;
 using SnoopWpfCLI.Models;
 using SnoopWpfCLI.Services;
 
+
 namespace SnoopWpfCLI.Commands;
 
 public static class WaitCommand
@@ -119,15 +120,8 @@ public static class WaitCommand
 
                     if (interactiveOnly && findResult.Success && findResult.Elements != null)
                     {
-                        var interactiveTypes = new[]
-                        {
-                            "Button", "TextBox", "CheckBox", "ComboBox", "ListBox",
-                            "RadioButton", "Slider", "ToggleButton", "PasswordBox",
-                            "RichTextBox", "DatePicker", "Expander", "MenuItem",
-                            "TabItem", "TreeViewItem", "ListBoxItem", "ComboBoxItem"
-                        };
                         findResult.Elements = findResult.Elements
-                            .Where(e => interactiveTypes.Any(t => e.Type != null && e.Type.EndsWith(t)))
+                            .Where(e => WpfKnownTypes.InteractiveTypes.Any(t => e.Type != null && e.Type.EndsWith(t)))
                             .ToList();
                         findResult.MatchCount = findResult.Elements.Count;
                     }

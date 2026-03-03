@@ -71,15 +71,23 @@ public static class GetElementCommand
 
             try
             {
+                // Mutual exclusion: --name, --text, --type/--hash
+                if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(text))
+                {
+                    var err = new { success = false, processId = pid, error = "Cannot specify both --name and --text" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+                if (!string.IsNullOrEmpty(text) && (!string.IsNullOrEmpty(type) || hashNullable.HasValue))
+                {
+                    var err = new { success = false, processId = pid, error = "Cannot specify --text with --type/--hash" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+
                 // Resolve type/hash from name if specified
                 if (!string.IsNullOrEmpty(name))
                 {
-                    if (!string.IsNullOrEmpty(text))
-                    {
-                        var err = new { success = false, processId = pid, error = "Cannot specify both --name and --text" };
-                        CommandHelpers.WriteError(err, format);
-                        return ExitCodes.GeneralError;
-                    }
                     var findResult = await service.FindElementAsync(pid, name, null, null, null);
                     if (!findResult.Success)
                     {

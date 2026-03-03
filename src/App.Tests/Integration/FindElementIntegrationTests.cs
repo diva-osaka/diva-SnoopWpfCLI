@@ -1,6 +1,8 @@
 using System.Linq;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using SnoopWpfCLI.Models;
 using Xunit;
 
 namespace SnoopWpfCLI.Tests.Integration;
@@ -180,18 +182,11 @@ public class FindElementIntegrationTests
 
         Assert.True(root.GetProperty("success").GetBoolean());
         // All results should be interactive types
-        var interactiveTypes = new[]
-        {
-            "Button", "TextBox", "CheckBox", "ComboBox", "ListBox",
-            "RadioButton", "Slider", "ToggleButton", "PasswordBox",
-            "RichTextBox", "DatePicker", "Expander", "MenuItem",
-            "TabItem", "TreeViewItem", "ListBoxItem", "ComboBoxItem"
-        };
         foreach (var el in root.GetProperty("elements").EnumerateArray())
         {
             var typeName = el.GetProperty("type").GetString();
             Assert.True(
-                typeName != null && interactiveTypes.Any(t => typeName.EndsWith(t)),
+                typeName != null && WpfKnownTypes.InteractiveTypes.Any(t => typeName.EndsWith(t)),
                 $"Element type '{typeName}' should be an interactive type");
         }
     }

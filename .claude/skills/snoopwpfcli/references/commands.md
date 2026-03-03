@@ -56,7 +56,7 @@ snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHC
 ### get-element
 
 ```bash
-snoopwpfcli get-element --pid <PID> (--name <NAME> | --text <TEXT> | --type <TYPE> --hash <HASHCODE>) [--verbose]
+snoopwpfcli get-element --pid <PID> (--name <NAME> | --text <TEXT> | --type <TYPE> --hash <HASHCODE>) [--format json|tree] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -66,6 +66,7 @@ snoopwpfcli get-element --pid <PID> (--name <NAME> | --text <TEXT> | --type <TYP
 | `--text` | No | Element text/content to search for. Alternative to `--name` or `--type`/`--hash` |
 | `--type` | No | Fully-qualified element type |
 | `--hash` | No | Element hashcode |
+| `--format` | No | Output format: `json` or `tree` |
 | `--verbose` | No | Enable verbose output |
 
 ### find-element
