@@ -542,9 +542,14 @@ SnoopWpfCLI/
 
 ## License
 
-MIT
+This project is licensed under the [MIT License](LICENSE).
+
+This project uses and depends on the following open-source projects:
+
+- **[SnoopWPF](https://github.com/snoopwpf/snoopwpf)** -- Licensed under [Ms-PL (Microsoft Public License)](https://github.com/snoopwpf/snoopwpf/blob/main/LICENSE.md). Used as a Git submodule for DLL injection into WPF processes.
+- **[SnoopWpfMcp](https://github.com/plop44/SnoopWpfMcp)** -- Licensed under [MIT License](https://github.com/plop44/SnoopWpfMcp/blob/main/LICENSE). The architecture and implementation of this CLI were heavily inspired by this project.
 
 ## Acknowledgements
 
 - [SnoopWPF](https://github.com/snoopwpf/snoopwpf) -- The WPF inspection tool that provides the DLL injection foundation
-- [SnoopWpfMcp](https://github.com/aoyagi/SnoopWpfMcp) -- The MCP server implementation this CLI is derived from
+- [SnoopWpfMcp](https://github.com/plop44/SnoopWpfMcp) -- The MCP server implementation that this CLI's architecture is heavily based on
