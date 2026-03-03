@@ -17,6 +17,7 @@
 - **list-windows** -- WPFアプリケーション内の全ウィンドウを一覧表示
 - **get-datacontext** -- 要素にバインドされたViewModelのプロパティを取得
 - **screenshot** -- WPFウィンドウのスクリーンショットを取得（ファイル保存またはbase64出力）
+- **assert** -- 要素の存在、テキスト内容、DataContextプロパティ値をアサーション
 
 ## 前提条件
 
@@ -259,7 +260,7 @@ snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--verbose]
 指定した要素を起点としたサブツリーを取得します。
 
 ```bash
-snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--format tree] [--verbose]
+snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) [--format tree] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -276,7 +277,7 @@ snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHC
 単一要素の詳細情報を取得します。
 
 ```bash
-snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--verbose]
+snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -289,10 +290,10 @@ snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHC
 
 ### find-element
 
-名前、テキスト、AutomationIdで要素を検索します。
+名前、テキスト、AutomationId、バインディングパスで要素を検索します。
 
 ```bash
-snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--verbose]
+snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--binding-path <PATH>] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -302,16 +303,17 @@ snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automati
 | `--text` | いいえ | テキスト/コンテンツ、部分一致 |
 | `--automationid` | いいえ | AutomationId、完全一致 |
 | `--type` | いいえ | 要素型でフィルタ |
+| `--binding-path` | いいえ | 指定したプロパティパスへのバインディングを持つ要素を検索 |
 | `--verbose` | いいえ | 詳細ログを出力 |
 
-検索条件（`--name`、`--text`、`--automationid`、`--type`）のうち少なくとも1つが必要です。
+検索条件（`--name`、`--text`、`--automationid`、`--type`、`--binding-path`）のうち少なくとも1つが必要です。
 
 ### invoke
 
 要素に対してUI Automationアクションを実行します。
 
 ```bash
-snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) --action <ACTION> [--params <JSON>] [--verbose]
+snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) --action <ACTION> [--params <JSON>] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -354,7 +356,7 @@ snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>)
 要素の出現・消失・状態変化を待機します。
 
 ```bash
-snoopwpfcli wait --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--until <CONDITION>] [--timeout <MS>] [--interval <MS>] [--verbose]
+snoopwpfcli wait --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--until <CONDITION>] [--timeout <MS>] [--interval <MS>] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -363,6 +365,7 @@ snoopwpfcli wait --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID
 | `--name` | いいえ | 待機対象の要素名（x:Name） |
 | `--text` | いいえ | 待機対象のテキスト/コンテンツ（部分一致） |
 | `--automationid` | いいえ | 待機対象のAutomationId |
+| `--type` | いいえ | 要素型でフィルタ |
 | `--until` | いいえ | 待機条件: `found`（デフォルト）、`gone`、`enabled`、`disabled` |
 | `--timeout` | いいえ | タイムアウト（ミリ秒、デフォルト: 30000） |
 | `--interval` | いいえ | ポーリング間隔（ミリ秒、デフォルト: 500） |
@@ -387,7 +390,7 @@ snoopwpfcli list-windows --pid <PID> [--format json|tree] [--verbose]
 要素のDataContextにバインドされたViewModelのプロパティを取得します。
 
 ```bash
-snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASHCODE> [--property <NAME>] [--verbose]
+snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASH> [--property <NAME>] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -412,6 +415,44 @@ snoopwpfcli screenshot --pid <PID> [--window <INDEX>] [--output <PATH>] [--verbo
 | `--window` | いいえ | ウィンドウインデックス（`list-windows` で確認） |
 | `--output` | いいえ | PNGファイルとして保存。省略時はbase64形式のJSONを出力。 |
 | `--verbose` | いいえ | 詳細ログを出力 |
+
+### assert
+
+要素の存在、テキスト内容、DataContextプロパティ値をアサーションします。自動UIテストに最適です。
+
+```bash
+snoopwpfcli assert --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--hash <HASH>] [--exists] [--property <NAME>] [--expected <VALUE>] [--format json|tree] [--verbose]
+```
+
+| オプション | 必須 | 説明 |
+|-----------|------|------|
+| `--pid` | はい | 対象プロセスID |
+| `--name` | いいえ | 要素名（x:Name） |
+| `--text` | いいえ | 検索対象のテキスト/コンテンツ（部分一致）、またはアサート対象値（完全一致） |
+| `--automationid` | いいえ | AutomationId |
+| `--type` | いいえ | 要素型名 |
+| `--hash` | いいえ | 要素のハッシュコード（`--type` と併用） |
+| `--exists` | いいえ | 要素の存在をアサート |
+| `--property` | いいえ | アサート対象のDataContextプロパティ名 |
+| `--expected` | いいえ | `--property` アサーションの期待値 |
+| `--format` | いいえ | 出力形式: `json` または `tree` |
+| `--verbose` | いいえ | 詳細ログを出力 |
+
+アサーションモード（`--exists`、`--text`、`--property`）は排他的です。
+
+**使用例:**
+
+```bash
+# 要素が存在することをアサート
+snoopwpfcli assert --pid 12345 --name StatusText --exists
+
+# 要素のテキストが一致することをアサート
+snoopwpfcli assert --pid 12345 --name StatusText --text "Success"
+
+# DataContextプロパティ値をアサート
+snoopwpfcli assert --pid 12345 --type MyApp.MainWindow --hash 99999 \
+    --property HasUnsavedChanges --expected true
+```
 
 ## 終了コード
 

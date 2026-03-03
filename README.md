@@ -17,6 +17,7 @@
 - **list-windows** -- List all windows in a WPF application
 - **get-datacontext** -- Read ViewModel properties bound to an element
 - **screenshot** -- Capture a screenshot of the WPF window (save to file or output as base64)
+- **assert** -- Assert element existence, text content, or DataContext property values
 
 ## Prerequisites
 
@@ -259,7 +260,7 @@ snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--verbose]
 Retrieve the subtree rooted at a specific element.
 
 ```bash
-snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--format tree] [--verbose]
+snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) [--format tree] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -276,7 +277,7 @@ snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHC
 Get detailed information about a single element.
 
 ```bash
-snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--verbose]
+snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) [--verbose]
 ```
 
 | Option | Required | Description |
@@ -289,10 +290,10 @@ snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHC
 
 ### find-element
 
-Search for elements by name, text content, or AutomationId.
+Search for elements by name, text content, AutomationId, or binding path.
 
 ```bash
-snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--verbose]
+snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--binding-path <PATH>] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -302,16 +303,17 @@ snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automati
 | `--text` | No | Text/content to search for, partial match |
 | `--automationid` | No | AutomationId, exact match |
 | `--type` | No | Filter by element type |
+| `--binding-path` | No | Find elements with a binding to this property path |
 | `--verbose` | No | Enable verbose output |
 
-At least one search criterion (`--name`, `--text`, `--automationid`, or `--type`) is required.
+At least one search criterion (`--name`, `--text`, `--automationid`, `--type`, or `--binding-path`) is required.
 
 ### invoke
 
 Execute a UI Automation action on an element.
 
 ```bash
-snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) --action <ACTION> [--params <JSON>] [--verbose]
+snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) --action <ACTION> [--params <JSON>] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -354,7 +356,7 @@ snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>)
 Wait for an element to appear, disappear, or change state.
 
 ```bash
-snoopwpfcli wait --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--until <CONDITION>] [--timeout <MS>] [--interval <MS>] [--verbose]
+snoopwpfcli wait --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--until <CONDITION>] [--timeout <MS>] [--interval <MS>] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -363,6 +365,7 @@ snoopwpfcli wait --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID
 | `--name` | No | Element name (x:Name) to wait for |
 | `--text` | No | Text/content to wait for (partial match) |
 | `--automationid` | No | AutomationId to wait for |
+| `--type` | No | Element type name to filter by |
 | `--until` | No | Wait condition: `found` (default), `gone`, `enabled`, `disabled` |
 | `--timeout` | No | Timeout in milliseconds (default: 30000) |
 | `--interval` | No | Polling interval in milliseconds (default: 500) |
@@ -387,7 +390,7 @@ snoopwpfcli list-windows --pid <PID> [--format json|tree] [--verbose]
 Read ViewModel properties bound to an element's DataContext.
 
 ```bash
-snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASHCODE> [--property <NAME>] [--verbose]
+snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASH> [--property <NAME>] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -412,6 +415,44 @@ snoopwpfcli screenshot --pid <PID> [--window <INDEX>] [--output <PATH>] [--verbo
 | `--window` | No | Window index (use `list-windows` to find) |
 | `--output` | No | Save as PNG file. If omitted, outputs base64 JSON. |
 | `--verbose` | No | Enable verbose output |
+
+### assert
+
+Assert element existence, text content, or DataContext property values. Useful for automated UI testing.
+
+```bash
+snoopwpfcli assert --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--hash <HASH>] [--exists] [--property <NAME>] [--expected <VALUE>] [--format json|tree] [--verbose]
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `--pid` | Yes | Target process ID |
+| `--name` | No | Element name (x:Name) |
+| `--text` | No | Element text/content to search for (partial match) and/or assert (exact match) |
+| `--automationid` | No | AutomationId to search for |
+| `--type` | No | Element type name |
+| `--hash` | No | Element hashcode (use with `--type`) |
+| `--exists` | No | Assert that the element exists |
+| `--property` | No | DataContext property name to assert on |
+| `--expected` | No | Expected value for `--property` assertion |
+| `--format` | No | Output format: `json` or `tree` |
+| `--verbose` | No | Enable verbose output |
+
+Assertion modes (`--exists`, `--text`, `--property`) are mutually exclusive.
+
+**Examples:**
+
+```bash
+# Assert element exists
+snoopwpfcli assert --pid 12345 --name StatusText --exists
+
+# Assert element text equals a value
+snoopwpfcli assert --pid 12345 --name StatusText --text "Success"
+
+# Assert DataContext property value
+snoopwpfcli assert --pid 12345 --type MyApp.MainWindow --hash 99999 \
+    --property HasUnsavedChanges --expected true
+```
 
 ## Exit Codes
 
