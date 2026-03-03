@@ -87,9 +87,9 @@ public static class FindElementCommand
 
             try
             {
-                if (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(text)
-                    && string.IsNullOrEmpty(automationId) && string.IsNullOrEmpty(type)
-                    && string.IsNullOrEmpty(bindingPath))
+                if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(text)
+                    && string.IsNullOrWhiteSpace(automationId) && string.IsNullOrWhiteSpace(type)
+                    && string.IsNullOrWhiteSpace(bindingPath))
                 {
                     CommandHelpers.WriteError(
                         new { success = false, processId = pid, error = "At least one search criterion (--name, --text, --automationid, --type, or --binding-path) is required" },

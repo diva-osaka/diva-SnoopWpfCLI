@@ -107,9 +107,9 @@ public static class AssertCommand
             try
             {
                 // Validate: need at least one search criterion
-                if (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(text)
-                    && string.IsNullOrEmpty(automationId) && string.IsNullOrEmpty(bindingPath)
-                    && (string.IsNullOrEmpty(type) || !hash.HasValue))
+                if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(text)
+                    && string.IsNullOrWhiteSpace(automationId) && string.IsNullOrWhiteSpace(bindingPath)
+                    && (string.IsNullOrWhiteSpace(type) || !hash.HasValue))
                 {
                     CommandHelpers.WriteError(
                         new { success = false, processId = pid, error = "At least --name, --text, --automationid, --binding-path, or both --type and --hash are required" },
@@ -118,7 +118,7 @@ public static class AssertCommand
                 }
 
                 // Validate: need at least one assertion mode
-                if (!exists && string.IsNullOrEmpty(text) && string.IsNullOrEmpty(property))
+                if (!exists && string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(property))
                 {
                     CommandHelpers.WriteError(
                         new { success = false, processId = pid, error = "At least one assertion (--exists, --text, or --property with --expected) is required" },
@@ -127,7 +127,7 @@ public static class AssertCommand
                 }
 
                 // Validate: --exists and --property are mutually exclusive
-                if (exists && !string.IsNullOrEmpty(property))
+                if (exists && !string.IsNullOrWhiteSpace(property))
                 {
                     CommandHelpers.WriteError(
                         new { success = false, processId = pid, error = "--exists and --property are mutually exclusive. Use --exists to check element presence, or --property with --expected to check a DataContext value." },
@@ -142,13 +142,13 @@ public static class AssertCommand
                 }
 
                 // Mode 2: --text assertion (assert element text equals expected)
-                if (!string.IsNullOrEmpty(text) && string.IsNullOrEmpty(property))
+                if (!string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(property))
                 {
                     return await AssertText(service, pid, name, text, automationId, type, bindingPath, format);
                 }
 
                 // Mode 3: --property + --expected assertion (assert DataContext property value)
-                if (!string.IsNullOrEmpty(property) && expected is not null)
+                if (!string.IsNullOrWhiteSpace(property) && expected is not null)
                 {
                     return await AssertProperty(service, pid, name, text, automationId, type, hash, bindingPath, property, expected, format);
                 }
@@ -260,7 +260,7 @@ public static class AssertCommand
         string elementType;
         int elementHash;
 
-        if (!string.IsNullOrEmpty(type) && hash.HasValue)
+        if (!string.IsNullOrWhiteSpace(type) && hash.HasValue)
         {
             elementType = type;
             elementHash = hash.Value;
