@@ -167,9 +167,14 @@ public static class WaitCommand
                                     bool isEnabled = true;
                                     if (elemDoc.RootElement.TryGetProperty("IsEnabled", out var isEnabledProp))
                                     {
-                                        isEnabled = isEnabledProp.ValueKind != JsonValueKind.False &&
-                                                    !(isEnabledProp.ValueKind == JsonValueKind.String &&
-                                                      isEnabledProp.GetString()?.Equals("false", StringComparison.OrdinalIgnoreCase) == true);
+                                        isEnabled = isEnabledProp.ValueKind switch
+                                        {
+                                            JsonValueKind.False => false,
+                                            JsonValueKind.True => true,
+                                            JsonValueKind.String => !string.Equals(isEnabledProp.GetString(), "false", StringComparison.OrdinalIgnoreCase),
+                                            JsonValueKind.Number => isEnabledProp.TryGetDouble(out var num) && num != 0,
+                                            _ => true
+                                        };
                                     }
 
                                     if ((until == "enabled" && isEnabled) || (until == "disabled" && !isEnabled))

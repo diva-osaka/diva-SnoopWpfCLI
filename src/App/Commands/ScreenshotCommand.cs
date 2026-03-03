@@ -61,10 +61,13 @@ public static class ScreenshotCommand
                 if (windowIndex.HasValue)
                 {
                     var windowsResult = await service.ListWindowsAsync(pid);
-                    if (windowsResult.Success && windowIndex.Value >= windowsResult.Windows.Count)
+                    if (windowsResult.Success && (windowIndex.Value < 0 || windowIndex.Value >= windowsResult.Windows.Count))
                     {
+                        var availableRange = windowsResult.Windows.Count > 0
+                            ? $"0-{windowsResult.Windows.Count - 1}"
+                            : "none (no windows found)";
                         var err = new { success = false, processId = pid,
-                            error = $"Window index {windowIndex.Value} is out of range. Available: 0-{windowsResult.Windows.Count - 1}" };
+                            error = $"Window index {windowIndex.Value} is out of range. Available: {availableRange}" };
                         CommandHelpers.WriteError(err, format);
                         return ExitCodes.GeneralError;
                     }

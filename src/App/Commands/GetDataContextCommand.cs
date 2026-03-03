@@ -85,10 +85,40 @@ public static class GetDataContextCommand
 
             try
             {
-                // Mutual exclusion: --name vs --type/--hash
+                // Mutual exclusion: --name, --text, --binding-path, --type/--hash
+                if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(text))
+                {
+                    var err = new { success = false, processId = pid, error = "Cannot specify both --name and --text" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
                 if (!string.IsNullOrEmpty(name) && (!string.IsNullOrEmpty(type) || hashNullable.HasValue))
                 {
                     var err = new { success = false, processId = pid, error = "Cannot specify --name with --type/--hash" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+                if (!string.IsNullOrEmpty(text) && (!string.IsNullOrEmpty(type) || hashNullable.HasValue))
+                {
+                    var err = new { success = false, processId = pid, error = "Cannot specify --text with --type/--hash" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+                if (!string.IsNullOrEmpty(bindingPath) && !string.IsNullOrEmpty(name))
+                {
+                    var err = new { success = false, processId = pid, error = "Cannot specify --binding-path with --name" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+                if (!string.IsNullOrEmpty(bindingPath) && !string.IsNullOrEmpty(text))
+                {
+                    var err = new { success = false, processId = pid, error = "Cannot specify --binding-path with --text" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+                if (!string.IsNullOrEmpty(bindingPath) && hashNullable.HasValue)
+                {
+                    var err = new { success = false, processId = pid, error = "Cannot specify --binding-path with --hash" };
                     CommandHelpers.WriteError(err, format);
                     return ExitCodes.GeneralError;
                 }
