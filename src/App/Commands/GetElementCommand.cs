@@ -138,7 +138,7 @@ public static class GetElementCommand
                     }
                     if (findResult.Elements.Count > 1)
                     {
-                        var err = new { success = false, processId = pid, error = $"Multiple elements found with text '{text}'. Use --type/--hash to specify." };
+                        var err = new { success = false, processId = pid, error = $"Multiple elements found with text '{text}'. Use a more specific text, or specify --type/--hash directly." };
                         CommandHelpers.WriteError(err, format);
                         return ExitCodes.GeneralError;
                     }

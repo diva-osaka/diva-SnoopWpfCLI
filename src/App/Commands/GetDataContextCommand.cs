@@ -142,7 +142,7 @@ public static class GetDataContextCommand
                     }
                     if (findResult.Elements.Count > 1)
                     {
-                        var err = new { success = false, processId = pid, error = $"Multiple elements found ({findResult.MatchCount}). Use --type/--hash to specify." };
+                        var err = new { success = false, processId = pid, error = $"Multiple elements found ({findResult.MatchCount}). Use a more specific selector, or specify --type/--hash directly." };
                         CommandHelpers.WriteError(err, format);
                         return ExitCodes.GeneralError;
                     }
