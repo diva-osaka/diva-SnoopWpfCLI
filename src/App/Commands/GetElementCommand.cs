@@ -32,6 +32,11 @@ public static class GetElementCommand
             Description = "Element name (x:Name) - resolves type and hash automatically"
         };
 
+        var textOption = new Option<string?>("--text")
+        {
+            Description = "Element text/content to search for - resolves type and hash automatically"
+        };
+
         var formatOption = new Option<string>("--format")
         {
             Description = "Output format: json or tree",
@@ -49,6 +54,7 @@ public static class GetElementCommand
         command.Options.Add(typeOption);
         command.Options.Add(hashOption);
         command.Options.Add(nameOption);
+        command.Options.Add(textOption);
         command.Options.Add(formatOption);
         command.Options.Add(verboseOption);
 
@@ -58,6 +64,7 @@ public static class GetElementCommand
             var type = parseResult.GetValue(typeOption);
             var hashNullable = parseResult.GetValue(hashOption);
             var name = parseResult.GetValue(nameOption);
+            var text = parseResult.GetValue(textOption);
             var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
             var service = new InjectionService(verbose);
@@ -67,6 +74,12 @@ public static class GetElementCommand
                 // Resolve type/hash from name if specified
                 if (!string.IsNullOrEmpty(name))
                 {
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        var err = new { success = false, processId = pid, error = "Cannot specify both --name and --text" };
+                        CommandHelpers.WriteError(err, format);
+                        return ExitCodes.GeneralError;
+                    }
                     var findResult = await service.FindElementAsync(pid, name, null, null, null);
                     if (!findResult.Success)
                     {
@@ -92,9 +105,37 @@ public static class GetElementCommand
                     hashNullable = found.Hashcode;
                 }
 
+                // Resolve type/hash from text if specified
+                if (!string.IsNullOrEmpty(text))
+                {
+                    var findResult = await service.FindElementAsync(pid, null, text, null, null);
+                    if (!findResult.Success)
+                    {
+                        var err = new { success = false, processId = pid, error = findResult.Error ?? "Element search failed" };
+                        CommandHelpers.WriteError(err, format);
+                        return findResult.Error == ErrorMessages.ProcessNotFound
+                            ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+                    }
+                    if (findResult.Elements.Count == 0)
+                    {
+                        var err = new { success = false, processId = pid, error = $"Element with text '{text}' not found" };
+                        CommandHelpers.WriteError(err, format);
+                        return ExitCodes.GeneralError;
+                    }
+                    if (findResult.Elements.Count > 1)
+                    {
+                        var err = new { success = false, processId = pid, error = $"Multiple elements found with text '{text}'. Use --type/--hash to specify." };
+                        CommandHelpers.WriteError(err, format);
+                        return ExitCodes.GeneralError;
+                    }
+                    var found = findResult.Elements[0];
+                    type = found.Type;
+                    hashNullable = found.Hashcode;
+                }
+
                 if (string.IsNullOrEmpty(type) || !hashNullable.HasValue)
                 {
-                    var err = new { success = false, processId = pid, error = "Either --name or both --type and --hash must be specified" };
+                    var err = new { success = false, processId = pid, error = "Either --name, --text, or both --type and --hash must be specified" };
                     CommandHelpers.WriteError(err, format);
                     return ExitCodes.GeneralError;
                 }

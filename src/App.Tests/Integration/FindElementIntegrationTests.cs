@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
@@ -164,5 +165,34 @@ public class FindElementIntegrationTests
         Assert.False(root.GetProperty("success").GetBoolean());
         Assert.True(root.TryGetProperty("error", out _), "error field should be present in stdout JSON");
         Assert.True(string.IsNullOrWhiteSpace(stderr), "stderr should be empty unless --verbose is enabled");
+    }
+
+    [Fact]
+    public async Task FindWithInteractiveOnly_ReturnsOnlyInteractiveElements()
+    {
+        var (stdout, stderr, exitCode) = await _fixture.RunCliAsync(
+            $"find-element --pid {_fixture.TestAppPid} --text \"Click Me\" --interactive-only");
+
+        Assert.True(exitCode == 0, $"find-element failed: exitCode={exitCode}\nstdout: {stdout}\nstderr: {stderr}");
+
+        using var doc = JsonDocument.Parse(stdout);
+        var root = doc.RootElement;
+
+        Assert.True(root.GetProperty("success").GetBoolean());
+        // All results should be interactive types
+        var interactiveTypes = new[]
+        {
+            "Button", "TextBox", "CheckBox", "ComboBox", "ListBox",
+            "RadioButton", "Slider", "ToggleButton", "PasswordBox",
+            "RichTextBox", "DatePicker", "Expander", "MenuItem",
+            "TabItem", "TreeViewItem", "ListBoxItem", "ComboBoxItem"
+        };
+        foreach (var el in root.GetProperty("elements").EnumerateArray())
+        {
+            var typeName = el.GetProperty("type").GetString();
+            Assert.True(
+                typeName != null && interactiveTypes.Any(t => typeName.EndsWith(t)),
+                $"Element type '{typeName}' should be an interactive type");
+        }
     }
 }

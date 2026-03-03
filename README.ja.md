@@ -277,13 +277,14 @@ snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>
 単一要素の詳細情報を取得します。
 
 ```bash
-snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) [--verbose]
+snoopwpfcli get-element --pid <PID> (--name <NAME> | --text <TEXT> | --type <TYPE> --hash <HASH>) [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
 |-----------|------|------|
 | `--pid` | はい | 対象プロセスID |
 | `--name` | いいえ | 要素名（x:Name）。`--type`/`--hash` の代替 |
+| `--text` | いいえ | テキスト/コンテンツで検索。`--name` や `--type`/`--hash` の代替 |
 | `--type` | いいえ | 要素の完全修飾型名 |
 | `--hash` | いいえ | 要素のハッシュコード |
 | `--verbose` | いいえ | 詳細ログを出力 |
@@ -293,7 +294,7 @@ snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>
 名前、テキスト、AutomationId、バインディングパスで要素を検索します。
 
 ```bash
-snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--binding-path <PATH>] [--verbose]
+snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--binding-path <PATH>] [--interactive-only] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -304,6 +305,7 @@ snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automati
 | `--automationid` | いいえ | AutomationId、完全一致 |
 | `--type` | いいえ | 要素型でフィルタ |
 | `--binding-path` | いいえ | 指定したプロパティパスへのバインディングを持つ要素を検索 |
+| `--interactive-only` | いいえ | インタラクティブコントロールのみにフィルタ（Button, TextBox, CheckBox等） |
 | `--verbose` | いいえ | 詳細ログを出力 |
 
 検索条件（`--name`、`--text`、`--automationid`、`--type`、`--binding-path`）のうち少なくとも1つが必要です。
@@ -356,7 +358,7 @@ snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) --a
 要素の出現・消失・状態変化を待機します。
 
 ```bash
-snoopwpfcli wait --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--until <CONDITION>] [--timeout <MS>] [--interval <MS>] [--verbose]
+snoopwpfcli wait --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--until <CONDITION>] [--timeout <MS>] [--interval <MS>] [--interactive-only] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -369,6 +371,7 @@ snoopwpfcli wait --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID
 | `--until` | いいえ | 待機条件: `found`（デフォルト）、`gone`、`enabled`、`disabled` |
 | `--timeout` | いいえ | タイムアウト（ミリ秒、デフォルト: 30000） |
 | `--interval` | いいえ | ポーリング間隔（ミリ秒、デフォルト: 500） |
+| `--interactive-only` | いいえ | インタラクティブコントロールのみにフィルタ（Button, TextBox, CheckBox等） |
 | `--verbose` | いいえ | 詳細ログを出力 |
 
 ### list-windows

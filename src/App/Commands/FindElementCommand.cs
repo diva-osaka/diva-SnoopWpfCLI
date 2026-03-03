@@ -1,5 +1,6 @@
 using System;
 using System.CommandLine;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using SnoopWpfCLI.Formatters;
@@ -54,6 +55,11 @@ public static class FindElementCommand
             Description = "Enable verbose output"
         };
 
+        var interactiveOnlyOption = new Option<bool>("--interactive-only")
+        {
+            Description = "Filter results to interactive controls only (Button, TextBox, CheckBox, etc.)"
+        };
+
         var command = new Command("find-element", "Find elements by name, text, or AutomationId");
         command.Options.Add(pidOption);
         command.Options.Add(nameOption);
@@ -63,6 +69,7 @@ public static class FindElementCommand
         command.Options.Add(bindingPathOption);
         command.Options.Add(formatOption);
         command.Options.Add(verboseOption);
+        command.Options.Add(interactiveOnlyOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
@@ -74,6 +81,7 @@ public static class FindElementCommand
             var bindingPath = parseResult.GetValue(bindingPathOption);
             var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
+            var interactiveOnly = parseResult.GetValue(interactiveOnlyOption);
             var service = new InjectionService(verbose);
 
             try
@@ -89,6 +97,21 @@ public static class FindElementCommand
                 }
 
                 var result = await service.FindElementAsync(pid, name, text, automationId, type, bindingPath);
+
+                if (interactiveOnly && result.Success && result.Elements != null)
+                {
+                    var interactiveTypes = new[]
+                    {
+                        "Button", "TextBox", "CheckBox", "ComboBox", "ListBox",
+                        "RadioButton", "Slider", "ToggleButton", "PasswordBox",
+                        "RichTextBox", "DatePicker", "Expander", "MenuItem",
+                        "TabItem", "TreeViewItem", "ListBoxItem", "ComboBoxItem"
+                    };
+                    result.Elements = result.Elements
+                        .Where(e => interactiveTypes.Any(t => e.Type != null && e.Type.EndsWith(t)))
+                        .ToList();
+                    result.MatchCount = result.Elements.Count;
+                }
 
                 if (format == "tree")
                 {

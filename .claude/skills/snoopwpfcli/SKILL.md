@@ -38,6 +38,9 @@ snoopwpfcli find-element --pid <PID> --automationid BtnSubmit
 
 # Combine filters
 snoopwpfcli find-element --pid <PID> --type System.Windows.Controls.Button --text "OK"
+
+# Interactive controls only (Button, TextBox, CheckBox, etc.)
+snoopwpfcli find-element --pid <PID> --text "OK" --interactive-only
 ```
 
 ### 3. Get Visual Tree
@@ -52,6 +55,9 @@ snoopwpfcli get-tree --pid <PID> --window 1          # specific window
 ```bash
 # By name (recommended -- stable across restarts)
 snoopwpfcli get-element --pid <PID> --name CountButton
+
+# By text content (must match exactly one element)
+snoopwpfcli get-element --pid <PID> --text "Click Me"
 
 # By type + hashcode (from tree output)
 snoopwpfcli get-element --pid <PID> --type System.Windows.Controls.Button --hash 56789
@@ -97,6 +103,9 @@ snoopwpfcli wait --pid <PID> --name SubmitButton --until enabled --timeout 5000
 
 # Wait for specific text
 snoopwpfcli wait --pid <PID> --text "Complete" --timeout 5000
+
+# Wait for interactive controls only
+snoopwpfcli wait --pid <PID> --type System.Windows.Controls.Button --until enabled --interactive-only --timeout 5000
 ```
 
 ### 7. Multiple Windows

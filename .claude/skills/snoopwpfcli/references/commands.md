@@ -56,13 +56,14 @@ snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHC
 ### get-element
 
 ```bash
-snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--verbose]
+snoopwpfcli get-element --pid <PID> (--name <NAME> | --text <TEXT> | --type <TYPE> --hash <HASHCODE>) [--verbose]
 ```
 
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--pid` | Yes | Target process ID |
 | `--name` | No | Element name (x:Name). Alternative to `--type`/`--hash` |
+| `--text` | No | Element text/content to search for. Alternative to `--name` or `--type`/`--hash` |
 | `--type` | No | Fully-qualified element type |
 | `--hash` | No | Element hashcode |
 | `--verbose` | No | Enable verbose output |
@@ -70,7 +71,7 @@ snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHC
 ### find-element
 
 ```bash
-snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--verbose]
+snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--binding-path <PATH>] [--interactive-only] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -80,6 +81,8 @@ snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automati
 | `--text` | No | Text/content, partial match |
 | `--automationid` | No | AutomationId, exact match |
 | `--type` | No | Filter by element type |
+| `--binding-path` | No | Find elements with a binding to this property path |
+| `--interactive-only` | No | Filter results to interactive controls only (Button, TextBox, CheckBox, etc.) |
 | `--verbose` | No | Enable verbose output |
 
 At least one search criterion is required.
@@ -128,7 +131,7 @@ snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>)
 ### wait
 
 ```bash
-snoopwpfcli wait --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--until <CONDITION>] [--timeout <MS>] [--interval <MS>] [--verbose]
+snoopwpfcli wait --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--until <CONDITION>] [--timeout <MS>] [--interval <MS>] [--interactive-only] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -137,9 +140,11 @@ snoopwpfcli wait --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID
 | `--name` | No | Element name (x:Name) to wait for |
 | `--text` | No | Text/content to wait for (partial match) |
 | `--automationid` | No | AutomationId to wait for |
+| `--type` | No | Element type name to filter by |
 | `--until` | No | Wait condition: `found` (default), `gone`, `enabled`, `disabled` |
 | `--timeout` | No | Timeout in milliseconds (default: 30000) |
 | `--interval` | No | Polling interval in milliseconds (default: 500) |
+| `--interactive-only` | No | Filter results to interactive controls only (Button, TextBox, CheckBox, etc.) |
 | `--verbose` | No | Enable verbose output |
 
 ### list-windows

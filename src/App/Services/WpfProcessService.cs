@@ -68,7 +68,7 @@ public class WpfProcessService
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error scanning for WPF processes: {ex.Message}");
+            Log($"Error scanning for WPF processes: {ex.Message}");
         }
 
         return wpfProcesses;

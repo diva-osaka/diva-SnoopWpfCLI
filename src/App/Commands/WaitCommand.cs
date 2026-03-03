@@ -1,6 +1,7 @@
 using System;
 using System.CommandLine;
 using System.Diagnostics;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -71,6 +72,11 @@ public static class WaitCommand
             Description = "Enable verbose output"
         };
 
+        var interactiveOnlyOption = new Option<bool>("--interactive-only")
+        {
+            Description = "Filter results to interactive controls only (Button, TextBox, CheckBox, etc.)"
+        };
+
         var command = new Command("wait", "Wait for an element to appear, disappear, or change state");
         command.Options.Add(pidOption);
         command.Options.Add(nameOption);
@@ -82,6 +88,7 @@ public static class WaitCommand
         command.Options.Add(intervalOption);
         command.Options.Add(formatOption);
         command.Options.Add(verboseOption);
+        command.Options.Add(interactiveOnlyOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
@@ -95,6 +102,7 @@ public static class WaitCommand
             var interval = parseResult.GetValue(intervalOption);
             var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
+            var interactiveOnly = parseResult.GetValue(interactiveOnlyOption);
             var service = new InjectionService(verbose);
 
             var stopwatch = Stopwatch.StartNew();
@@ -108,6 +116,21 @@ public static class WaitCommand
                     linkedCts.Token.ThrowIfCancellationRequested();
 
                     var findResult = await service.FindElementAsync(pid, name, text, automationId, type);
+
+                    if (interactiveOnly && findResult.Success && findResult.Elements != null)
+                    {
+                        var interactiveTypes = new[]
+                        {
+                            "Button", "TextBox", "CheckBox", "ComboBox", "ListBox",
+                            "RadioButton", "Slider", "ToggleButton", "PasswordBox",
+                            "RichTextBox", "DatePicker", "Expander", "MenuItem",
+                            "TabItem", "TreeViewItem", "ListBoxItem", "ComboBoxItem"
+                        };
+                        findResult.Elements = findResult.Elements
+                            .Where(e => interactiveTypes.Any(t => e.Type != null && e.Type.EndsWith(t)))
+                            .ToList();
+                        findResult.MatchCount = findResult.Elements.Count;
+                    }
 
                     if (verbose)
                     {
