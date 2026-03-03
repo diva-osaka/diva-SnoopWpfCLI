@@ -43,4 +43,34 @@ public class GetElementIntegrationTests
 
         Assert.False(root.GetProperty("success").GetBoolean());
     }
+
+    [Fact]
+    public async Task GetElementByText_ReturnsDetails()
+    {
+        var (stdout, stderr, exitCode) = await _fixture.RunCliAsync(
+            $"get-element --pid {_fixture.TestAppPid} --text \"Click Me\"");
+
+        Assert.True(exitCode == 0, $"get-element failed: exitCode={exitCode}\nstdout: {stdout}\nstderr: {stderr}");
+
+        using var doc = JsonDocument.Parse(stdout);
+        var root = doc.RootElement;
+
+        Assert.True(root.GetProperty("success").GetBoolean());
+        Assert.Contains("Button", root.GetProperty("type").GetString());
+        Assert.True(root.TryGetProperty("element", out _), "Should contain element details");
+    }
+
+    [Fact]
+    public async Task GetElementByText_NotFound()
+    {
+        var (stdout, stderr, exitCode) = await _fixture.RunCliAsync(
+            $"get-element --pid {_fixture.TestAppPid} --text \"NonExistentTextXYZ\"");
+
+        Assert.NotEqual(0, exitCode);
+
+        using var doc = JsonDocument.Parse(stdout);
+        var root = doc.RootElement;
+
+        Assert.False(root.GetProperty("success").GetBoolean());
+    }
 }

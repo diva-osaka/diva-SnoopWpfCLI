@@ -193,4 +193,23 @@ public class FindElementCommandTests
         var result = root.Parse("find-element --pid 1234 --name InputField --binding-path LidarIp");
         Assert.Equal(0, result.Errors.Count);
     }
+
+    [Fact]
+    public void Command_HasInteractiveOnlyOption()
+    {
+        var command = FindElementCommand.Create();
+        var opt = command.Options.FirstOrDefault(o => o.Name == "--interactive-only");
+        Assert.NotNull(opt);
+    }
+
+    [Fact]
+    public void Parse_WithInteractiveOnly_NoErrors()
+    {
+        var command = FindElementCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("find-element --pid 1234 --type System.Windows.Controls.Button --interactive-only");
+        Assert.Equal(0, result.Errors.Count);
+    }
 }

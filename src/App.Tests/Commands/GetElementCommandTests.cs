@@ -54,6 +54,24 @@ public class GetElementCommandTests
     }
 
     [Fact]
+    public void Command_HasTextOption()
+    {
+        var command = GetElementCommand.Create();
+        Assert.NotNull(command.Options.FirstOrDefault(o => o.Name == "--text"));
+    }
+
+    [Fact]
+    public void Parse_WithTextOption_NoErrors()
+    {
+        var command = GetElementCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("get-element --pid 1234 --text \"Click Me\"");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
+    [Fact]
     public void Parse_MissingPid_HasErrors()
     {
         var command = GetElementCommand.Create();

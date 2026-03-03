@@ -95,7 +95,11 @@ public class InjectionService
             _injectedProcesses[processId] = DateTime.UtcNow;
 
             Log("Waiting for pipe server to start...");
-            await Task.Delay(2000);
+            var pipeReady = await WaitForPipeReadyAsync(processId, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200));
+            if (!pipeReady)
+            {
+                Log($"Pipe server did not respond within timeout after injection");
+            }
 
             Log($"Sending ping to process {processId}");
             var response = await SendPingAsync(processId);
@@ -150,6 +154,16 @@ public class InjectionService
             }
         }
 
+        // 辞書に無くても、Named Pipeへの短タイムアウトpingで既インジェクション済みかを確認
+        Log($"Checking if process {processId} already has WpfInspector via pipe ping...");
+        var directResponse = await SendPingAsync(processId, TimeSpan.FromSeconds(1));
+        if (directResponse != null)
+        {
+            Log($"Process {processId} already has WpfInspector injected (detected via pipe ping)");
+            _injectedProcesses[processId] = DateTime.UtcNow;
+            return true;
+        }
+
         return false;
     }
 
@@ -165,7 +179,11 @@ public class InjectionService
         Log($"Successfully injected WpfInspector into process {processId}");
         _injectedProcesses[processId] = DateTime.UtcNow;
         Log("Waiting for pipe server to start...");
-        await Task.Delay(2000);
+        var pipeReady = await WaitForPipeReadyAsync(processId, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200));
+        if (!pipeReady)
+        {
+            Log($"Pipe server did not respond within timeout, proceeding anyway");
+        }
         return (true, null);
     }
 
@@ -945,6 +963,22 @@ public class InjectionService
             Log($"Exception during injection: {ex.Message}");
             return false;
         }
+    }
+
+    private async Task<bool> WaitForPipeReadyAsync(int processId, TimeSpan maxWait, TimeSpan interval)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (sw.Elapsed < maxWait)
+        {
+            var response = await SendPingAsync(processId, TimeSpan.FromSeconds(1));
+            if (response != null)
+            {
+                Log($"Pipe server ready after {sw.ElapsedMilliseconds}ms");
+                return true;
+            }
+            await Task.Delay(interval);
+        }
+        return false;
     }
 
     private async Task<string?> SendPingAsync(int processId, TimeSpan? timeout = null)

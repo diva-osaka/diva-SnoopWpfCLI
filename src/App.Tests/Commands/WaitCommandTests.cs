@@ -214,4 +214,23 @@ public class WaitCommandTests
         var result = root.Parse("wait --pid 1234 --name CountButton --type System.Windows.Controls.Button --until found --timeout 10000");
         Assert.Equal(0, result.Errors.Count);
     }
+
+    [Fact]
+    public void Command_HasInteractiveOnlyOption()
+    {
+        var command = WaitCommand.Create();
+        var opt = command.Options.FirstOrDefault(o => o.Name == "--interactive-only");
+        Assert.NotNull(opt);
+    }
+
+    [Fact]
+    public void Parse_WithInteractiveOnly_NoErrors()
+    {
+        var command = WaitCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("wait --pid 1234 --name MyButton --interactive-only");
+        Assert.Equal(0, result.Errors.Count);
+    }
 }
