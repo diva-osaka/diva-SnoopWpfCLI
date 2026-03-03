@@ -94,10 +94,10 @@ public static class WaitCommand
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var pid = parseResult.GetValue(pidOption);
-            var name = parseResult.GetValue(nameOption);
-            var text = parseResult.GetValue(textOption);
-            var automationId = parseResult.GetValue(automationIdOption);
-            var type = parseResult.GetValue(typeOption);
+            var name = parseResult.GetValue(nameOption)?.Trim() is { Length: > 0 } n ? n : null;
+            var text = parseResult.GetValue(textOption)?.Trim() is { Length: > 0 } tx ? tx : null;
+            var automationId = parseResult.GetValue(automationIdOption)?.Trim() is { Length: > 0 } aid ? aid : null;
+            var type = parseResult.GetValue(typeOption)?.Trim() is { Length: > 0 } t ? t : null;
             var until = parseResult.GetValue(untilOption) ?? "found";
             var timeout = parseResult.GetValue(timeoutOption);
             var interval = parseResult.GetValue(intervalOption);

@@ -80,11 +80,11 @@ public static class InvokeCommand
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var pid = parseResult.GetValue(pidOption);
-            var type = parseResult.GetValue(typeOption);
+            var type = parseResult.GetValue(typeOption)?.Trim() is { Length: > 0 } t ? t : null;
             var hashNullable = parseResult.GetValue(hashOption);
-            var name = parseResult.GetValue(nameOption);
-            var text = parseResult.GetValue(textOption);
-            var bindingPath = parseResult.GetValue(bindingPathOption);
+            var name = parseResult.GetValue(nameOption)?.Trim() is { Length: > 0 } n ? n : null;
+            var text = parseResult.GetValue(textOption)?.Trim() is { Length: > 0 } tx ? tx : null;
+            var bindingPath = parseResult.GetValue(bindingPathOption)?.Trim() is { Length: > 0 } bp ? bp : null;
             var action = parseResult.GetValue(actionOption)!;
             var parameters = parseResult.GetValue(paramsOption);
             var format = parseResult.GetValue(formatOption);

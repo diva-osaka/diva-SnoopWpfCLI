@@ -91,12 +91,12 @@ public static class AssertCommand
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var pid = parseResult.GetValue(pidOption);
-            var name = parseResult.GetValue(nameOption);
-            var text = parseResult.GetValue(textOption);
-            var automationId = parseResult.GetValue(automationIdOption);
-            var type = parseResult.GetValue(typeOption);
+            var name = parseResult.GetValue(nameOption)?.Trim() is { Length: > 0 } n ? n : null;
+            var text = parseResult.GetValue(textOption)?.Trim() is { Length: > 0 } tx ? tx : null;
+            var automationId = parseResult.GetValue(automationIdOption)?.Trim() is { Length: > 0 } aid ? aid : null;
+            var type = parseResult.GetValue(typeOption)?.Trim() is { Length: > 0 } tp ? tp : null;
             var hash = parseResult.GetValue(hashOption);
-            var bindingPath = parseResult.GetValue(bindingPathOption);
+            var bindingPath = parseResult.GetValue(bindingPathOption)?.Trim() is { Length: > 0 } bp ? bp : null;
             var exists = parseResult.GetValue(existsOption);
             var property = parseResult.GetValue(propertyOption);
             var expected = parseResult.GetValue(expectedOption);
