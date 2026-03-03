@@ -158,5 +158,11 @@ public class FindElementIntegrationTests
             $"find-element --pid {_fixture.TestAppPid}");
 
         Assert.NotEqual(0, exitCode);
+
+        using var doc = JsonDocument.Parse(stdout);
+        var root = doc.RootElement;
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.True(root.TryGetProperty("error", out _), "error field should be present in stdout JSON");
+        Assert.True(string.IsNullOrWhiteSpace(stderr), "stderr should be empty unless --verbose is enabled");
     }
 }

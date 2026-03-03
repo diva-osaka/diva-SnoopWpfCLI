@@ -44,11 +44,18 @@ public class TestAppFixture : IAsyncLifetime
 
         TestAppProcess = process;
 
-        // Wait for the process to initialize and create its window
-        await Task.Delay(3000);
+        // Wait for the process to be ready for input
+        if (!process.WaitForInputIdle(10000))
+        {
+            await DisposeAsync();
+            throw new InvalidOperationException("TestApp failed to enter idle state within 10 seconds.");
+        }
 
         if (process.HasExited)
+        {
+            await DisposeAsync();
             throw new InvalidOperationException($"TestApp exited immediately with code {process.ExitCode}");
+        }
 
         // Pre-inject via ping with retry (injection may fail if WPF app not fully ready)
         int exitCode = -1;
@@ -62,18 +69,24 @@ public class TestAppFixture : IAsyncLifetime
         }
 
         if (exitCode != 0)
+        {
+            await DisposeAsync();
             throw new InvalidOperationException(
                 $"Pre-injection ping failed with exit code {exitCode}.\nstdout: {stdout}\nstderr: {stderr}");
+        }
     }
 
     public async Task DisposeAsync()
     {
-        if (TestAppProcess != null && !TestAppProcess.HasExited)
+        if (TestAppProcess != null)
         {
             try
             {
-                TestAppProcess.Kill(entireProcessTree: true);
-                await TestAppProcess.WaitForExitAsync();
+                if (!TestAppProcess.HasExited)
+                {
+                    TestAppProcess.Kill(entireProcessTree: true);
+                    await TestAppProcess.WaitForExitAsync();
+                }
             }
             catch
             {
