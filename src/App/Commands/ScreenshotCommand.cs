@@ -58,6 +58,18 @@ public static class ScreenshotCommand
 
             try
             {
+                if (windowIndex.HasValue)
+                {
+                    var windowsResult = await service.ListWindowsAsync(pid);
+                    if (windowsResult.Success && windowIndex.Value >= windowsResult.Windows.Count)
+                    {
+                        var err = new { success = false, processId = pid,
+                            error = $"Window index {windowIndex.Value} is out of range. Available: 0-{windowsResult.Windows.Count - 1}" };
+                        CommandHelpers.WriteError(err, format);
+                        return ExitCodes.GeneralError;
+                    }
+                }
+
                 var result = await service.TakeScreenshotAsync(pid, windowIndex);
 
                 if (result.Success && !string.IsNullOrEmpty(outputPath))

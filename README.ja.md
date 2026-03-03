@@ -260,13 +260,15 @@ snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--verbose]
 指定した要素を起点としたサブツリーを取得します。
 
 ```bash
-snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) [--format tree] [--verbose]
+snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --text <TEXT> | --binding-path <PATH> | --type <TYPE> --hash <HASH>) [--format tree] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
 |-----------|------|------|
 | `--pid` | はい | 対象プロセスID |
 | `--name` | いいえ | 要素名（x:Name）。`--type`/`--hash` の代替 |
+| `--text` | いいえ | テキスト/コンテンツで検索 |
+| `--binding-path` | いいえ | バインディングパスで検索 |
 | `--type` | いいえ | 要素の完全修飾型名（例: `System.Windows.Controls.Button`） |
 | `--hash` | いいえ | 要素のハッシュコード |
 | `--format tree` | いいえ | 人間可読のツリー形式で出力 |
@@ -316,13 +318,15 @@ snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automati
 要素に対してUI Automationアクションを実行します。
 
 ```bash
-snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) --action <ACTION> [--params <JSON>] [--verbose]
+snoopwpfcli invoke --pid <PID> (--name <NAME> | --text <TEXT> | --binding-path <PATH> | --type <TYPE> --hash <HASH>) --action <ACTION> [--params <JSON>] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
 |-----------|------|------|
 | `--pid` | はい | 対象プロセスID |
 | `--name` | いいえ | 要素名（x:Name）。`--type`/`--hash` の代替 |
+| `--text` | いいえ | テキスト/コンテンツで検索 |
+| `--binding-path` | いいえ | バインディングパスで検索 |
 | `--type` | いいえ | 要素の完全修飾型名 |
 | `--hash` | いいえ | 要素のハッシュコード |
 | `--action` | はい | Automation Peerアクション名 |
@@ -394,14 +398,17 @@ snoopwpfcli list-windows --pid <PID> [--format json|tree] [--verbose]
 要素のDataContextにバインドされたViewModelのプロパティを取得します。
 
 ```bash
-snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASH> [--property <NAME>] [--verbose]
+snoopwpfcli get-datacontext --pid <PID> (--name <NAME> | --text <TEXT> | --binding-path <PATH> | --type <TYPE> --hash <HASH>) [--property <NAME>] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
 |-----------|------|------|
 | `--pid` | はい | 対象プロセスID |
-| `--type` | はい | 要素の完全修飾型名 |
-| `--hash` | はい | 要素のハッシュコード |
+| `--name` | いいえ | 要素名（x:Name）。`--type`/`--hash` の代替 |
+| `--text` | いいえ | テキスト/コンテンツで検索 |
+| `--binding-path` | いいえ | バインディングパスで検索 |
+| `--type` | いいえ | 要素の完全修飾型名 |
+| `--hash` | いいえ | 要素のハッシュコード |
 | `--property` | いいえ | 特定プロパティのみ取得 |
 | `--verbose` | いいえ | 詳細ログを出力 |
 
@@ -425,7 +432,7 @@ snoopwpfcli screenshot --pid <PID> [--window <INDEX>] [--output <PATH>] [--verbo
 要素の存在、テキスト内容、DataContextプロパティ値をアサーションします。自動UIテストに最適です。
 
 ```bash
-snoopwpfcli assert --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--hash <HASH>] [--exists] [--property <NAME>] [--expected <VALUE>] [--format json|tree] [--verbose]
+snoopwpfcli assert --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--binding-path <PATH>] [--type <TYPE>] [--hash <HASH>] [--exists] [--property <NAME>] [--expected <VALUE>] [--format json|tree] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -434,6 +441,7 @@ snoopwpfcli assert --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <
 | `--name` | いいえ | 要素名（x:Name） |
 | `--text` | いいえ | 検索対象のテキスト/コンテンツ（部分一致）、またはアサート対象値（完全一致） |
 | `--automationid` | いいえ | AutomationId |
+| `--binding-path` | いいえ | バインディングパスで検索 |
 | `--type` | いいえ | 要素型名 |
 | `--hash` | いいえ | 要素のハッシュコード（`--type` と併用） |
 | `--exists` | いいえ | 要素の存在をアサート |

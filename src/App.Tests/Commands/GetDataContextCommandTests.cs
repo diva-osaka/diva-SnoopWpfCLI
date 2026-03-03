@@ -25,6 +25,30 @@ public class GetDataContextCommandTests
     }
 
     [Fact]
+    public void Command_HasNameOption()
+    {
+        var command = GetDataContextCommand.Create();
+        var opt = command.Options.FirstOrDefault(o => o.Name == "--name");
+        Assert.NotNull(opt);
+    }
+
+    [Fact]
+    public void Command_HasTextOption()
+    {
+        var command = GetDataContextCommand.Create();
+        var opt = command.Options.FirstOrDefault(o => o.Name == "--text");
+        Assert.NotNull(opt);
+    }
+
+    [Fact]
+    public void Command_HasBindingPathOption()
+    {
+        var command = GetDataContextCommand.Create();
+        var opt = command.Options.FirstOrDefault(o => o.Name == "--binding-path");
+        Assert.NotNull(opt);
+    }
+
+    [Fact]
     public void Command_HasOptionalPropertyOption()
     {
         var command = GetDataContextCommand.Create();
@@ -104,25 +128,48 @@ public class GetDataContextCommandTests
     }
 
     [Fact]
-    public void Parse_MissingType_HasErrors()
+    public void Parse_WithoutTypeOrHash_NoParseErrors()
     {
+        // --type and --hash are no longer Required; validation happens at runtime
         var command = GetDataContextCommand.Create();
         var root = new RootCommand();
         root.Subcommands.Add(command);
 
-        var result = root.Parse("get-datacontext --pid 1234 --hash 5678");
-        Assert.True(result.Errors.Count > 0);
+        var result = root.Parse("get-datacontext --pid 1234");
+        Assert.Equal(0, result.Errors.Count);
     }
 
     [Fact]
-    public void Parse_MissingHash_HasErrors()
+    public void Parse_WithNameOption_NoErrors()
     {
         var command = GetDataContextCommand.Create();
         var root = new RootCommand();
         root.Subcommands.Add(command);
 
-        var result = root.Parse("get-datacontext --pid 1234 --type System.Windows.Controls.Button");
-        Assert.True(result.Errors.Count > 0);
+        var result = root.Parse("get-datacontext --pid 1234 --name MyButton");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
+    [Fact]
+    public void Parse_WithTextOption_NoErrors()
+    {
+        var command = GetDataContextCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("get-datacontext --pid 1234 --text \"Click\"");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
+    [Fact]
+    public void Parse_WithBindingPathOption_NoErrors()
+    {
+        var command = GetDataContextCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("get-datacontext --pid 1234 --binding-path InputText");
+        Assert.Equal(0, result.Errors.Count);
     }
 
     [Fact]

@@ -17,16 +17,29 @@ public static class GetDataContextCommand
             Required = true
         };
 
-        var typeOption = new Option<string>("--type")
+        var typeOption = new Option<string?>("--type")
         {
-            Description = "Element type name",
-            Required = true
+            Description = "Element type name"
         };
 
-        var hashOption = new Option<int>("--hash")
+        var hashOption = new Option<int?>("--hash")
         {
-            Description = "Element hashcode",
-            Required = true
+            Description = "Element hashcode"
+        };
+
+        var nameOption = new Option<string?>("--name")
+        {
+            Description = "Element name (x:Name) - resolves type and hash automatically"
+        };
+
+        var textOption = new Option<string?>("--text")
+        {
+            Description = "Element text/content to search for"
+        };
+
+        var bindingPathOption = new Option<string?>("--binding-path")
+        {
+            Description = "Binding path to search for"
         };
 
         var propertyOption = new Option<string?>("--property")
@@ -50,6 +63,9 @@ public static class GetDataContextCommand
         command.Options.Add(pidOption);
         command.Options.Add(typeOption);
         command.Options.Add(hashOption);
+        command.Options.Add(nameOption);
+        command.Options.Add(textOption);
+        command.Options.Add(bindingPathOption);
         command.Options.Add(propertyOption);
         command.Options.Add(formatOption);
         command.Options.Add(verboseOption);
@@ -57,8 +73,11 @@ public static class GetDataContextCommand
         command.SetAction(async (parseResult, cancellationToken) =>
         {
             var pid = parseResult.GetValue(pidOption);
-            var type = parseResult.GetValue(typeOption)!;
-            var hash = parseResult.GetValue(hashOption);
+            var type = parseResult.GetValue(typeOption);
+            var hashNullable = parseResult.GetValue(hashOption);
+            var name = parseResult.GetValue(nameOption);
+            var text = parseResult.GetValue(textOption);
+            var bindingPath = parseResult.GetValue(bindingPathOption);
             var property = parseResult.GetValue(propertyOption);
             var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
@@ -66,6 +85,51 @@ public static class GetDataContextCommand
 
             try
             {
+                // Mutual exclusion: --name vs --type/--hash
+                if (!string.IsNullOrEmpty(name) && (!string.IsNullOrEmpty(type) || hashNullable.HasValue))
+                {
+                    var err = new { success = false, processId = pid, error = "Cannot specify --name with --type/--hash" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+
+                // Resolve from name/text/bindingPath if specified
+                if (!string.IsNullOrEmpty(name) || !string.IsNullOrEmpty(text) || !string.IsNullOrEmpty(bindingPath))
+                {
+                    var findResult = await service.FindElementAsync(pid, name, text, null, type, bindingPath);
+                    if (!findResult.Success)
+                    {
+                        var err = new { success = false, processId = pid, error = findResult.Error ?? "Element search failed" };
+                        CommandHelpers.WriteError(err, format);
+                        return findResult.Error == ErrorMessages.ProcessNotFound
+                            ? ExitCodes.ProcessNotFound : ExitCodes.InjectionFailed;
+                    }
+                    if (findResult.Elements.Count == 0)
+                    {
+                        var err = new { success = false, processId = pid, error = "Element not found" };
+                        CommandHelpers.WriteError(err, format);
+                        return ExitCodes.GeneralError;
+                    }
+                    if (findResult.Elements.Count > 1)
+                    {
+                        var err = new { success = false, processId = pid, error = $"Multiple elements found ({findResult.MatchCount}). Use --type/--hash to specify." };
+                        CommandHelpers.WriteError(err, format);
+                        return ExitCodes.GeneralError;
+                    }
+                    var found = findResult.Elements[0];
+                    type = found.Type;
+                    hashNullable = found.Hashcode;
+                }
+
+                // Validate type + hash are available
+                if (string.IsNullOrEmpty(type) || !hashNullable.HasValue)
+                {
+                    var err = new { success = false, processId = pid, error = "Either --name, --text, --binding-path, or both --type and --hash must be specified" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+
+                var hash = hashNullable.Value;
                 var result = await service.GetDataContextAsync(pid, type, hash, property);
 
                 CommandHelpers.WriteResult(result, format);

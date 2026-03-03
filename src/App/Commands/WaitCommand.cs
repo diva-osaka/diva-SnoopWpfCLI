@@ -161,14 +161,21 @@ public static class WaitCommand
                                 {
                                     var elemJson = JsonSerializer.Serialize(elementDetail.Element);
                                     using var elemDoc = JsonDocument.Parse(elemJson);
+
+                                    // WPF default for IsEnabled is true.
+                                    // DLL returns only non-default values, so absence means enabled.
+                                    bool isEnabled = true;
                                     if (elemDoc.RootElement.TryGetProperty("IsEnabled", out var isEnabledProp))
                                     {
-                                        var isEnabled = isEnabledProp.ValueKind == JsonValueKind.True;
-                                        if ((until == "enabled" && isEnabled) || (until == "disabled" && !isEnabled))
-                                        {
-                                            conditionMet = true;
-                                            matchedElement = element;
-                                        }
+                                        isEnabled = isEnabledProp.ValueKind != JsonValueKind.False &&
+                                                    !(isEnabledProp.ValueKind == JsonValueKind.String &&
+                                                      isEnabledProp.GetString()?.Equals("false", StringComparison.OrdinalIgnoreCase) == true);
+                                    }
+
+                                    if ((until == "enabled" && isEnabled) || (until == "disabled" && !isEnabled))
+                                    {
+                                        conditionMet = true;
+                                        matchedElement = element;
                                     }
                                 }
                             }

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using SnoopWpfCLI.Services;
 using Xunit;
 
@@ -300,5 +301,112 @@ public class InjectionServiceParseTests
         Assert.False(result.Success);
         Assert.NotNull(result.Error);
         Assert.Contains("not found", result.Error);
+    }
+
+    // --- AutomationPeer response parsing ---
+
+    [Fact]
+    public void ParseAutomationPeerResponse_Success_WithStringValue()
+    {
+        var json = """
+        {
+            "success": true,
+            "value": "hello",
+            "isReadOnly": false
+        }
+        """;
+
+        var result = ResponseParser.ParseAutomationPeerResponse(json, 1234, "System.Windows.Controls.TextBox", 11111, "Value_Get");
+
+        Assert.True(result.Success);
+        Assert.Equal(1234, result.ProcessId);
+        Assert.Equal("System.Windows.Controls.TextBox", result.Type);
+        Assert.Equal(11111, result.Hashcode);
+        Assert.Equal("Value_Get", result.Action);
+        Assert.NotNull(result.Result);
+
+        var resultDict = result.Result as Dictionary<string, object?>;
+        Assert.NotNull(resultDict);
+        Assert.Equal("hello", resultDict["value"]);
+        Assert.Equal(false, resultDict["isReadOnly"]);
+    }
+
+    [Fact]
+    public void ParseAutomationPeerResponse_Success_WithNumericValue()
+    {
+        var json = """
+        {
+            "success": true,
+            "value": 42.5,
+            "minimum": 0,
+            "maximum": 100,
+            "isReadOnly": true
+        }
+        """;
+
+        var result = ResponseParser.ParseAutomationPeerResponse(json, 1234, "System.Windows.Controls.Slider", 22222, "RangeValue_Get");
+
+        Assert.True(result.Success);
+        var resultDict = result.Result as Dictionary<string, object?>;
+        Assert.NotNull(resultDict);
+        Assert.Equal(42.5, resultDict["value"]);
+        Assert.Equal(0.0, resultDict["minimum"]);
+        Assert.Equal(100.0, resultDict["maximum"]);
+        Assert.Equal(true, resultDict["isReadOnly"]);
+    }
+
+    [Fact]
+    public void ParseAutomationPeerResponse_Success_WithMessageOnly()
+    {
+        var json = """
+        {
+            "success": true,
+            "message": "Action completed successfully"
+        }
+        """;
+
+        var result = ResponseParser.ParseAutomationPeerResponse(json, 1234, "System.Windows.Controls.Button", 33333, "Invoke");
+
+        Assert.True(result.Success);
+        Assert.Equal("Action completed successfully", result.Message);
+        Assert.Null(result.Result);
+    }
+
+    [Fact]
+    public void ParseAutomationPeerResponse_Error()
+    {
+        var json = """
+        {
+            "success": false,
+            "error": "Element does not support ValuePattern"
+        }
+        """;
+
+        var result = ResponseParser.ParseAutomationPeerResponse(json, 1234, "System.Windows.Controls.Grid", 44444, "Value_Get");
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.Error);
+        Assert.Contains("ValuePattern", result.Error);
+    }
+
+    [Fact]
+    public void ParseAutomationPeerResponse_ExcludesSuccessMessageError_FromResult()
+    {
+        var json = """
+        {
+            "success": true,
+            "message": "OK",
+            "value": "test"
+        }
+        """;
+
+        var result = ResponseParser.ParseAutomationPeerResponse(json, 1234, "System.Windows.Controls.TextBox", 55555, "Value_Get");
+
+        var resultDict = result.Result as Dictionary<string, object?>;
+        Assert.NotNull(resultDict);
+        Assert.Single(resultDict);
+        Assert.True(resultDict.ContainsKey("value"));
+        Assert.False(resultDict.ContainsKey("success"));
+        Assert.False(resultDict.ContainsKey("message"));
     }
 }

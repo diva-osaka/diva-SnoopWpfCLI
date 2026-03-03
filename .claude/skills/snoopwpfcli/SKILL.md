@@ -69,6 +69,12 @@ snoopwpfcli get-element --pid <PID> --type System.Windows.Controls.Button --hash
 # By name
 snoopwpfcli invoke --pid <PID> --name CountButton --action Invoke_Invoke
 
+# By text content
+snoopwpfcli invoke --pid <PID> --text "Click Me" --action Invoke_Invoke
+
+# By binding path (stable across restarts)
+snoopwpfcli invoke --pid <PID> --binding-path InputText --action Value_Get
+
 # By type + hash
 snoopwpfcli invoke --pid <PID> --type <TYPE> --hash <HASH> --action <ACTION>
 ```
@@ -119,6 +125,14 @@ snoopwpfcli screenshot --pid <PID> --window 1 --output dialog.png
 ### 8. Read DataContext (ViewModel)
 
 ```bash
+# By name (recommended)
+snoopwpfcli get-datacontext --pid <PID> --name CountButton
+snoopwpfcli get-datacontext --pid <PID> --name CountButton --property Title
+
+# By binding path
+snoopwpfcli get-datacontext --pid <PID> --binding-path InputText --property Value
+
+# By type + hash
 snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASH>
 snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASH> --property Title
 ```
@@ -141,6 +155,10 @@ snoopwpfcli ping --pid $PID
 snoopwpfcli invoke --pid $PID --name InputTextBox --action Value_Set --params '{"value":"Hello"}'
 snoopwpfcli invoke --pid $PID --name SubmitButton --action Invoke_Invoke
 
+# 2b. Alternative: use --binding-path for hashcode-independent testing
+snoopwpfcli invoke --pid $PID --binding-path InputText --action Value_Set --params '{"value":"Hello"}'
+snoopwpfcli assert --pid $PID --binding-path InputText --property Value --expected "Hello"
+
 # 3. Wait for result
 snoopwpfcli wait --pid $PID --name StatusText --text "Success" --timeout 5000
 
@@ -160,7 +178,8 @@ snoopwpfcli screenshot --pid $PID --output result.png
 
 ## Tips
 
-- **Prefer `--name` over `--type`/`--hash`**: Names are stable across process restarts.
+- **Prefer `--name` or `--binding-path` over `--type`/`--hash`**: Names and binding paths are stable across process restarts. hashCode values change every time the process restarts, so avoid hardcoding them in test scripts.
+- **`--binding-path` for E2E tests**: When writing automated tests, `--binding-path` is the most resilient option as it targets the data binding rather than the UI element identity.
 - **Multiple windows**: Use `list-windows` then `--window <index>` on get-tree/screenshot.
 - **RadioButton with ICommand**: Use `ButtonBase_Click` instead of `SelectionItem_Select`.
 - **Re-injection**: If the target app restarts, run `ping` again.

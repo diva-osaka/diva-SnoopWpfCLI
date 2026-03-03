@@ -87,6 +87,43 @@ internal static class ResponseParser
         };
     }
 
+    internal static AutomationPeerResult ParseAutomationPeerResponse(string response, int processId, string type, int hashcode, string action)
+    {
+        using var doc = JsonDocument.Parse(response);
+        var root = doc.RootElement;
+
+        var success = root.TryGetProperty("success", out var successElement) ? successElement.GetBoolean() : false;
+        var message = root.TryGetProperty("message", out var messageElement) ? messageElement.GetString() ?? "" : "";
+        var error = root.TryGetProperty("error", out var errorElement) ? errorElement.GetString() : null;
+
+        Dictionary<string, object?>? resultData = null;
+        foreach (var prop in root.EnumerateObject())
+        {
+            if (prop.Name is "success" or "message" or "error") continue;
+            resultData ??= new();
+            resultData[prop.Name] = prop.Value.ValueKind switch
+            {
+                JsonValueKind.String => prop.Value.GetString(),
+                JsonValueKind.Number => prop.Value.GetDouble(),
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                _ => prop.Value.GetRawText()
+            };
+        }
+
+        return new AutomationPeerResult
+        {
+            Success = success,
+            ProcessId = processId,
+            Type = type,
+            Hashcode = hashcode,
+            Action = action,
+            Message = success ? (message ?? string.Empty) : (error ?? "Unknown error"),
+            Error = success ? null : (error ?? "Unknown error"),
+            Result = resultData
+        };
+    }
+
     internal static DataContextResult ParseGetDataContextResponse(string response, int processId, string type, int hashcode)
     {
         using var doc = JsonDocument.Parse(response);

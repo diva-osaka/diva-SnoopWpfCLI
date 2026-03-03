@@ -105,4 +105,40 @@ public class InvokeCommandTests
         var result = root.Parse("invoke --pid 1234 --type System.Windows.Controls.Button --hash 5678 --action ExecuteCommand");
         Assert.Equal(0, result.Errors.Count);
     }
+
+    [Fact]
+    public void Command_HasTextOption()
+    {
+        var command = InvokeCommand.Create();
+        Assert.NotNull(command.Options.FirstOrDefault(o => o.Name == "--text"));
+    }
+
+    [Fact]
+    public void Command_HasBindingPathOption()
+    {
+        var command = InvokeCommand.Create();
+        Assert.NotNull(command.Options.FirstOrDefault(o => o.Name == "--binding-path"));
+    }
+
+    [Fact]
+    public void Parse_WithTextOption_NoErrors()
+    {
+        var command = InvokeCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("invoke --pid 1234 --text \"Click Me\" --action Invoke_Invoke");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
+    [Fact]
+    public void Parse_WithBindingPathOption_NoErrors()
+    {
+        var command = InvokeCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("invoke --pid 1234 --binding-path DataContext.Name --action Value_Get");
+        Assert.Equal(0, result.Errors.Count);
+    }
 }

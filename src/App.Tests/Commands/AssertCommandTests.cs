@@ -227,6 +227,36 @@ public class AssertCommandTests
         Assert.Equal(0, result.Errors.Count);
     }
 
+    [Fact]
+    public void Command_HasBindingPathOption()
+    {
+        var command = AssertCommand.Create();
+        var opt = command.Options.FirstOrDefault(o => o.Name == "--binding-path");
+        Assert.NotNull(opt);
+    }
+
+    [Fact]
+    public void Parse_WithBindingPathAndExists_NoErrors()
+    {
+        var command = AssertCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("assert --pid 1234 --binding-path InputText --exists");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
+    [Fact]
+    public void Parse_WithBindingPathAndProperty_NoErrors()
+    {
+        var command = AssertCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("assert --pid 1234 --binding-path InputText --property Value --expected \"test\"");
+        Assert.Equal(0, result.Errors.Count);
+    }
+
     // --exists and --property are mutually exclusive (parse succeeds but runtime validation rejects)
     [Fact]
     public void Parse_WithExistsAndProperty_ParsesSuccessfully()
