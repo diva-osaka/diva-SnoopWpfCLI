@@ -19,12 +19,12 @@ public static class GetSubtreeCommand
 
         var typeOption = new Option<string?>("--type")
         {
-            Description = "Element type name (required unless --name is specified)"
+            Description = "Element type name (required unless --name, --text, or --binding-path is specified)"
         };
 
         var hashOption = new Option<int?>("--hash")
         {
-            Description = "Element hashcode (required unless --name is specified)"
+            Description = "Element hashcode (required unless --name, --text, or --binding-path is specified)"
         };
 
         var nameOption = new Option<string?>("--name")

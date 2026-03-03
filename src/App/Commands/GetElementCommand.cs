@@ -19,12 +19,12 @@ public static class GetElementCommand
 
         var typeOption = new Option<string?>("--type")
         {
-            Description = "Element type name (required unless --name is specified)"
+            Description = "Element type name (required unless --name or --text is specified)"
         };
 
         var hashOption = new Option<int?>("--hash")
         {
-            Description = "Element hashcode (required unless --name is specified)"
+            Description = "Element hashcode (required unless --name or --text is specified)"
         };
 
         var nameOption = new Option<string?>("--name")
