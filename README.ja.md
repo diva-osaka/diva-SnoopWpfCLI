@@ -260,7 +260,7 @@ snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--verbose]
 指定した要素を起点としたサブツリーを取得します。
 
 ```bash
-snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--format tree] [--verbose]
+snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) [--format tree] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -277,7 +277,7 @@ snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHC
 単一要素の詳細情報を取得します。
 
 ```bash
-snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--verbose]
+snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -313,7 +313,7 @@ snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automati
 要素に対してUI Automationアクションを実行します。
 
 ```bash
-snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) --action <ACTION> [--params <JSON>] [--verbose]
+snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) --action <ACTION> [--params <JSON>] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -390,7 +390,7 @@ snoopwpfcli list-windows --pid <PID> [--format json|tree] [--verbose]
 要素のDataContextにバインドされたViewModelのプロパティを取得します。
 
 ```bash
-snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASHCODE> [--property <NAME>] [--verbose]
+snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASH> [--property <NAME>] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -421,14 +421,14 @@ snoopwpfcli screenshot --pid <PID> [--window <INDEX>] [--output <PATH>] [--verbo
 要素の存在、テキスト内容、DataContextプロパティ値をアサーションします。自動UIテストに最適です。
 
 ```bash
-snoopwpfcli assert --pid <PID> (--name <NAME> | --text <TEXT> | --automationid <ID> | --type <TYPE> --hash <HASH>) (--exists | --text <TEXT> | --property <NAME> --expected <VALUE>) [--format json|tree] [--verbose]
+snoopwpfcli assert --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--hash <HASH>] [--exists] [--property <NAME>] [--expected <VALUE>] [--format json|tree] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
 |-----------|------|------|
 | `--pid` | はい | 対象プロセスID |
 | `--name` | いいえ | 要素名（x:Name） |
-| `--text` | いいえ | 検索対象のテキスト/コンテンツ、またはアサート対象値 |
+| `--text` | いいえ | 検索対象のテキスト/コンテンツ（部分一致）、またはアサート対象値（完全一致） |
 | `--automationid` | いいえ | AutomationId |
 | `--type` | いいえ | 要素型名 |
 | `--hash` | いいえ | 要素のハッシュコード（`--type` と併用） |

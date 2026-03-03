@@ -260,7 +260,7 @@ snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--verbose]
 Retrieve the subtree rooted at a specific element.
 
 ```bash
-snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--format tree] [--verbose]
+snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) [--format tree] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -277,7 +277,7 @@ snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHC
 Get detailed information about a single element.
 
 ```bash
-snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) [--verbose]
+snoopwpfcli get-element --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) [--verbose]
 ```
 
 | Option | Required | Description |
@@ -313,7 +313,7 @@ At least one search criterion (`--name`, `--text`, `--automationid`, `--type`, o
 Execute a UI Automation action on an element.
 
 ```bash
-snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASHCODE>) --action <ACTION> [--params <JSON>] [--verbose]
+snoopwpfcli invoke --pid <PID> (--name <NAME> | --type <TYPE> --hash <HASH>) --action <ACTION> [--params <JSON>] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -390,7 +390,7 @@ snoopwpfcli list-windows --pid <PID> [--format json|tree] [--verbose]
 Read ViewModel properties bound to an element's DataContext.
 
 ```bash
-snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASHCODE> [--property <NAME>] [--verbose]
+snoopwpfcli get-datacontext --pid <PID> --type <TYPE> --hash <HASH> [--property <NAME>] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -421,14 +421,14 @@ snoopwpfcli screenshot --pid <PID> [--window <INDEX>] [--output <PATH>] [--verbo
 Assert element existence, text content, or DataContext property values. Useful for automated UI testing.
 
 ```bash
-snoopwpfcli assert --pid <PID> (--name <NAME> | --text <TEXT> | --automationid <ID> | --type <TYPE> --hash <HASH>) (--exists | --text <TEXT> | --property <NAME> --expected <VALUE>) [--format json|tree] [--verbose]
+snoopwpfcli assert --pid <PID> [--name <NAME>] [--text <TEXT>] [--automationid <ID>] [--type <TYPE>] [--hash <HASH>] [--exists] [--property <NAME>] [--expected <VALUE>] [--format json|tree] [--verbose]
 ```
 
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--pid` | Yes | Target process ID |
 | `--name` | No | Element name (x:Name) |
-| `--text` | No | Element text/content to search for and/or assert |
+| `--text` | No | Element text/content to search for (partial match) and/or assert (exact match) |
 | `--automationid` | No | AutomationId to search for |
 | `--type` | No | Element type name |
 | `--hash` | No | Element hashcode (use with `--type`) |
