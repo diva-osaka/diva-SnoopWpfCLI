@@ -454,6 +454,16 @@ snoopwpfcli assert --pid 12345 --type MyApp.MainWindow --hash 99999 \
     --property HasUnsavedChanges --expected true
 ```
 
+## Output
+
+All JSON results (both success and error) are written to **stdout**. The exit code indicates success (`0`) or failure (non-zero). **stderr** is reserved for diagnostic output (`--verbose`).
+
+This means you can always parse stdout regardless of the outcome:
+
+```bash
+snoopwpfcli find-element --pid 12345 --name MyButton | jq '.matchCount'
+```
+
 ## Exit Codes
 
 | Code | Meaning |

@@ -4,22 +4,20 @@ using Xunit;
 
 namespace SnoopWpfCLI.Tests.Integration;
 
-public class ListProcessesIntegrationTests : IntegrationTestBase, IAsyncLifetime
+[Collection("TestApp")]
+public class ListProcessesIntegrationTests
 {
-    public async Task InitializeAsync()
-    {
-        await StartTestAppAsync();
-    }
+    private readonly TestAppFixture _fixture;
 
-    async Task IAsyncLifetime.DisposeAsync()
+    public ListProcessesIntegrationTests(TestAppFixture fixture)
     {
-        await CleanupAsync();
+        _fixture = fixture;
     }
 
     [Fact]
     public async Task ListProcesses_FindsTestApp()
     {
-        var (stdout, stderr, exitCode) = await RunCliAsync("list-processes");
+        var (stdout, stderr, exitCode) = await _fixture.RunCliAsync("list-processes");
 
         Assert.Equal(0, exitCode);
         Assert.False(string.IsNullOrWhiteSpace(stdout), "stdout should not be empty");
@@ -40,7 +38,7 @@ public class ListProcessesIntegrationTests : IntegrationTestBase, IAsyncLifetime
             if (processName == "TestApp")
             {
                 foundTestApp = true;
-                Assert.Equal(TestAppPid, proc.GetProperty("processId").GetInt32());
+                Assert.Equal(_fixture.TestAppPid, proc.GetProperty("processId").GetInt32());
                 Assert.True(proc.GetProperty("isWpfApplication").GetBoolean());
                 break;
             }
@@ -52,7 +50,7 @@ public class ListProcessesIntegrationTests : IntegrationTestBase, IAsyncLifetime
     [Fact]
     public async Task ListProcesses_ReturnsValidJson()
     {
-        var (stdout, _, exitCode) = await RunCliAsync("list-processes");
+        var (stdout, _, exitCode) = await _fixture.RunCliAsync("list-processes");
 
         Assert.Equal(0, exitCode);
 

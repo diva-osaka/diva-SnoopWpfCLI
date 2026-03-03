@@ -142,6 +142,13 @@ snoopwpfcli get-element --pid $PID --name ResultLabel
 snoopwpfcli screenshot --pid $PID --output result.png
 ```
 
+## Output
+
+- **JSON results** (success and error) are always written to **stdout**.
+- **stderr** is reserved for verbose/diagnostic output (`--verbose`).
+- **Exit code** determines success (0) or failure (non-zero).
+- This means `command | jq '.error'` works reliably regardless of outcome.
+
 ## Tips
 
 - **Prefer `--name` over `--type`/`--hash`**: Names are stable across process restarts.

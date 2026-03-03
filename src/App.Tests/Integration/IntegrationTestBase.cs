@@ -12,7 +12,7 @@ public class IntegrationTestBase : IAsyncDisposable
     protected Process? TestAppProcess { get; private set; }
     protected int TestAppPid => TestAppProcess?.Id ?? 0;
 
-    protected static string GetTestAppPath()
+    public static string GetTestAppPath()
     {
         var testAssemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
         // Navigate from src/App.Tests/bin/Debug/net10.0-windows/ to tests/TestApp/bin/Debug/net10.0-windows/
@@ -28,7 +28,7 @@ public class IntegrationTestBase : IAsyncDisposable
         return testAppPath;
     }
 
-    protected static string GetCliPath()
+    public static string GetCliPath()
     {
         var testAssemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
         var solutionRoot = Path.GetFullPath(Path.Combine(testAssemblyDir, "..", "..", "..", "..", ".."));
@@ -75,7 +75,7 @@ public class IntegrationTestBase : IAsyncDisposable
         return process;
     }
 
-    protected async Task<(string stdout, string stderr, int exitCode)> RunCliAsync(string arguments, int timeoutMs = 30000)
+    public static async Task<(string stdout, string stderr, int exitCode)> RunCliAsync(string arguments, int timeoutMs = 30000)
     {
         var cliPath = GetCliPath();
 

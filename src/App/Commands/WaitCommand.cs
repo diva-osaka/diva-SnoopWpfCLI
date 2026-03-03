@@ -196,7 +196,7 @@ public static class WaitCommand
                     ElapsedMs = stopwatch.ElapsedMilliseconds,
                     Error = "Timeout"
                 };
-                OutputResult(result, format, toStdErr: true);
+                OutputResult(result, format);
                 return ExitCodes.Timeout;
             }
             catch (Exception ex) when (ex is TimeoutException or TaskCanceledException)
@@ -211,7 +211,7 @@ public static class WaitCommand
                     ElapsedMs = stopwatch.ElapsedMilliseconds,
                     Error = "Timeout"
                 };
-                OutputResult(result, format, toStdErr: true);
+                OutputResult(result, format);
                 return ExitCodes.Timeout;
             }
             catch (Exception ex)
@@ -226,7 +226,7 @@ public static class WaitCommand
                     ElapsedMs = stopwatch.ElapsedMilliseconds,
                     Error = ex.Message
                 };
-                OutputResult(result, format, toStdErr: true);
+                OutputResult(result, format);
                 return ExitCodes.GeneralError;
             }
         });
@@ -234,19 +234,18 @@ public static class WaitCommand
         return command;
     }
 
-    private static void OutputResult(WaitResult result, string? format, bool toStdErr = false)
+    private static void OutputResult(WaitResult result, string? format)
     {
-        var writer = toStdErr ? Console.Error : Console.Out;
         if (format == "tree")
         {
             var jsonStr = JsonSerializer.Serialize(result);
             using var doc = JsonDocument.Parse(jsonStr);
-            writer.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
+            Console.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
         }
         else
         {
             var options = new JsonSerializerOptions { WriteIndented = true };
-            writer.WriteLine(JsonSerializer.Serialize(result, options));
+            Console.WriteLine(JsonSerializer.Serialize(result, options));
         }
     }
 }

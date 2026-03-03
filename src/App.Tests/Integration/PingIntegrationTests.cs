@@ -4,22 +4,20 @@ using Xunit;
 
 namespace SnoopWpfCLI.Tests.Integration;
 
-public class PingIntegrationTests : IntegrationTestBase, IAsyncLifetime
+[Collection("TestApp")]
+public class PingIntegrationTests
 {
-    public async Task InitializeAsync()
-    {
-        await StartTestAppAsync();
-    }
+    private readonly TestAppFixture _fixture;
 
-    async Task IAsyncLifetime.DisposeAsync()
+    public PingIntegrationTests(TestAppFixture fixture)
     {
-        await CleanupAsync();
+        _fixture = fixture;
     }
 
     [Fact]
     public async Task Ping_WithValidPid_Succeeds()
     {
-        var (stdout, stderr, exitCode) = await RunCliAsync($"ping --pid {TestAppPid}", timeoutMs: 60000);
+        var (stdout, stderr, exitCode) = await _fixture.RunCliAsync($"ping --pid {_fixture.TestAppPid}", timeoutMs: 60000);
 
         Assert.True(exitCode == 0, $"Expected exit code 0 but got {exitCode}.\nstdout: {stdout}\nstderr: {stderr}");
         Assert.False(string.IsNullOrWhiteSpace(stdout), "stdout should not be empty");
@@ -28,13 +26,13 @@ public class PingIntegrationTests : IntegrationTestBase, IAsyncLifetime
         var root = doc.RootElement;
 
         Assert.True(root.GetProperty("success").GetBoolean());
-        Assert.Equal(TestAppPid, root.GetProperty("processId").GetInt32());
+        Assert.Equal(_fixture.TestAppPid, root.GetProperty("processId").GetInt32());
     }
 
     [Fact]
     public async Task Ping_WithInvalidPid_ReturnsError()
     {
-        var (stdout, stderr, exitCode) = await RunCliAsync("ping --pid 99999");
+        var (stdout, stderr, exitCode) = await _fixture.RunCliAsync("ping --pid 99999");
 
         Assert.NotEqual(0, exitCode);
 

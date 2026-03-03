@@ -27,11 +27,12 @@ internal static class CommandHelpers
         {
             var jsonStr = JsonSerializer.Serialize(error);
             using var doc = JsonDocument.Parse(jsonStr);
-            Console.Error.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
+            Console.WriteLine(TreeFormatter.FormatGenericResult(doc.RootElement));
         }
         else
         {
-            Console.Error.WriteLine(JsonSerializer.Serialize(error));
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            Console.WriteLine(JsonSerializer.Serialize(error, options));
         }
     }
 }
