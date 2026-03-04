@@ -1774,7 +1774,7 @@ namespace SnoopWpfCLI.WpfInspector
                                         elementBindings.Add(new { property = dp.Name, path = be.ParentBinding.Path.Path });
                                     }
                                 }
-                                catch { }
+                                catch (Exception ex) { LogMessage($"Error collecting binding info on {element.GetType().Name}.{dp.Name}: {ex.Message}"); }
                             }
 
                             matchingElements.Add(new

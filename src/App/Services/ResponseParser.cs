@@ -38,10 +38,17 @@ internal static class ResponseParser
                     var bindings = new List<ElementBinding>();
                     foreach (var bindingElem in bindingsElement.EnumerateArray())
                     {
+                        if (bindingElem.ValueKind != JsonValueKind.Object)
+                            continue;
+
                         bindings.Add(new ElementBinding
                         {
-                            Property = bindingElem.TryGetProperty("property", out var p) ? p.GetString() ?? "" : "",
-                            Path = bindingElem.TryGetProperty("path", out var path) ? path.GetString() ?? "" : ""
+                            Property = bindingElem.TryGetProperty("property", out var p) && p.ValueKind == JsonValueKind.String
+                                ? p.GetString() ?? ""
+                                : "",
+                            Path = bindingElem.TryGetProperty("path", out var path) && path.ValueKind == JsonValueKind.String
+                                ? path.GetString() ?? ""
+                                : ""
                         });
                     }
                     if (bindings.Count > 0)

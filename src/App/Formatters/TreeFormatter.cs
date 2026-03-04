@@ -156,8 +156,14 @@ public static class TreeFormatter
                 {
                     foreach (var binding in bindingsProp.EnumerateArray())
                     {
-                        var property = binding.TryGetProperty("property", out var propName) ? propName.GetString() : null;
-                        var path = binding.TryGetProperty("path", out var pathVal) ? pathVal.GetString() : null;
+                        var property = binding.TryGetProperty("property", out var propName)
+                            && propName.ValueKind == JsonValueKind.String
+                            ? propName.GetString()
+                            : null;
+                        var path = binding.TryGetProperty("path", out var pathVal)
+                            && pathVal.ValueKind == JsonValueKind.String
+                            ? pathVal.GetString()
+                            : null;
                         if (!string.IsNullOrEmpty(property) && !string.IsNullOrEmpty(path))
                             sb.Append($" {property}={{Binding: {path}}}");
                     }
@@ -346,10 +352,11 @@ public static class TreeFormatter
             // Check if value is a binding object
             if (prop.Value.ValueKind == JsonValueKind.Object
                 && prop.Value.TryGetProperty("type", out var typeVal)
+                && typeVal.ValueKind == JsonValueKind.String
                 && typeVal.GetString() == "binding"
                 && prop.Value.TryGetProperty("path", out var pathVal))
             {
-                var path = pathVal.GetString();
+                var path = pathVal.ValueKind == JsonValueKind.String ? pathVal.GetString() : null;
                 if (!string.IsNullOrEmpty(path))
                 {
                     result.Add($"{prop.Name}={{Binding: {path}}}");

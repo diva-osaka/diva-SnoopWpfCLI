@@ -696,7 +696,14 @@ namespace SnoopWpfCLI.WpfInspector
                     {
                         index = i,
                         text = item?.ToString() ?? "",
-                        isSelected = (element is Selector selector && selector.SelectedItem == item)
+                        isSelected = element switch
+                        {
+                            ListBox listBox when listBox.SelectionMode != SelectionMode.Single
+                                => listBox.SelectedItems.Contains(item),
+                            Selector selector
+                                => Equals(selector.SelectedItem, item),
+                            _ => false
+                        }
                     });
                 }
                 return new { success = true, itemCount = items.Count, items };
