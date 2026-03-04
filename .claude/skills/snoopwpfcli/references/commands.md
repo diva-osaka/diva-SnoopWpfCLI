@@ -28,7 +28,7 @@ snoopwpfcli ping --pid <PID> [--verbose]
 ### get-tree
 
 ```bash
-snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--verbose]
+snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--detail] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -36,12 +36,13 @@ snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--verbose]
 | `--pid` | Yes | Target process ID |
 | `--window` | No | Window index (use `list-windows` to find) |
 | `--format tree` | No | Human-readable tree instead of JSON |
+| `--detail` | No | Show binding details for each element (tree format only) |
 | `--verbose` | No | Enable verbose output |
 
 ### get-subtree
 
 ```bash
-snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --text <TEXT> | --binding-path <PATH> | --type <TYPE> --hash <HASHCODE>) [--format tree] [--verbose]
+snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --text <TEXT> | --binding-path <PATH> | --type <TYPE> --hash <HASHCODE>) [--format tree] [--detail] [--verbose]
 ```
 
 | Option | Required | Description |
@@ -53,6 +54,7 @@ snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --text <TEXT> | --binding-p
 | `--type` | No | Fully-qualified element type |
 | `--hash` | No | Element hashcode |
 | `--format tree` | No | Human-readable tree |
+| `--detail` | No | Show binding details for each element (tree format only) |
 | `--verbose` | No | Enable verbose output |
 
 ### get-element
@@ -88,7 +90,9 @@ snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automati
 | `--interactive-only` | No | Filter results to interactive controls only (Button, TextBox, CheckBox, etc.) |
 | `--verbose` | No | Enable verbose output |
 
-At least one search criterion is required.
+At least one search criterion is required, or `--interactive-only` can be used alone to list all interactive controls.
+
+The `find-element` response includes binding information for each element when bindings are present (e.g., `Text={Binding: UserName}`).
 
 ### invoke
 
@@ -130,6 +134,7 @@ snoopwpfcli invoke --pid <PID> (--name <NAME> | --text <TEXT> | --binding-path <
 | `Scroll_Status` | Get scroll position | none |
 | `Scroll_Scroll` | Scroll by amount | none |
 | `Scroll_SetPosition` | Set absolute scroll position | none |
+| `Selection_GetItems` | List items in ComboBox/ListBox (index, text, isSelected) | none |
 | `ButtonBase_Click` | Fire Click event on ButtonBase (RadioButton, ToggleButton) | none |
 | `ExecuteCommand` | Execute the ICommand bound to the element | none |
 

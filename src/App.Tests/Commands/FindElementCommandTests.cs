@@ -212,4 +212,15 @@ public class FindElementCommandTests
         var result = root.Parse("find-element --pid 1234 --type System.Windows.Controls.Button --interactive-only");
         Assert.Equal(0, result.Errors.Count);
     }
+
+    [Fact]
+    public void Parse_WithInteractiveOnlyAlone_NoErrors()
+    {
+        var command = FindElementCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("find-element --pid 1234 --interactive-only");
+        Assert.Equal(0, result.Errors.Count);
+    }
 }

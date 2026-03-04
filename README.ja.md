@@ -245,7 +245,7 @@ snoopwpfcli ping --pid <PID> [--verbose]
 対象WPFウィンドウのビジュアルツリー全体を取得します。
 
 ```bash
-snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--verbose]
+snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--detail] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -253,6 +253,7 @@ snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--verbose]
 | `--pid` | はい | 対象プロセスID |
 | `--window` | いいえ | ウィンドウインデックス（`list-windows` で確認） |
 | `--format tree` | いいえ | JSON形式の代わりに人間可読のツリー形式で出力 |
+| `--detail` | いいえ | 各要素のバインディング詳細を表示（ツリー形式のみ） |
 | `--verbose` | いいえ | 詳細ログを出力 |
 
 ### get-subtree
@@ -260,7 +261,7 @@ snoopwpfcli get-tree --pid <PID> [--window <INDEX>] [--format tree] [--verbose]
 指定した要素を起点としたサブツリーを取得します。
 
 ```bash
-snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --text <TEXT> | --binding-path <PATH> | --type <TYPE> --hash <HASH>) [--format tree] [--verbose]
+snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --text <TEXT> | --binding-path <PATH> | --type <TYPE> --hash <HASH>) [--format tree] [--detail] [--verbose]
 ```
 
 | オプション | 必須 | 説明 |
@@ -272,6 +273,7 @@ snoopwpfcli get-subtree --pid <PID> (--name <NAME> | --text <TEXT> | --binding-p
 | `--type` | いいえ | 要素の完全修飾型名（例: `System.Windows.Controls.Button`） |
 | `--hash` | いいえ | 要素のハッシュコード |
 | `--format tree` | いいえ | 人間可読のツリー形式で出力 |
+| `--detail` | いいえ | 各要素のバインディング詳細を表示（ツリー形式のみ） |
 | `--verbose` | いいえ | 詳細ログを出力 |
 
 ### get-element
@@ -311,7 +313,7 @@ snoopwpfcli find-element --pid <PID> [--name <NAME>] [--text <TEXT>] [--automati
 | `--interactive-only` | いいえ | インタラクティブコントロールのみにフィルタ（Button, TextBox, CheckBox等） |
 | `--verbose` | いいえ | 詳細ログを出力 |
 
-検索条件（`--name`、`--text`、`--automationid`、`--type`、`--binding-path`）のうち少なくとも1つが必要です。
+検索条件（`--name`、`--text`、`--automationid`、`--type`、`--binding-path`）のうち少なくとも1つが必要です。`--interactive-only` は単独でも使用できます。
 
 ### invoke
 
@@ -355,6 +357,7 @@ snoopwpfcli invoke --pid <PID> (--name <NAME> | --text <TEXT> | --binding-path <
 | `Scroll_Status` | スクロール位置を取得 |
 | `Scroll_Scroll` | スクロール量を指定してスクロール |
 | `Scroll_SetPosition` | スクロール位置を絶対値で設定 |
+| `Selection_GetItems` | ComboBox/ListBoxのアイテム一覧を取得（index, text, isSelected） |
 | `ButtonBase_Click` | ButtonBase派生要素（RadioButton、ToggleButton）のClickイベントを発火 |
 | `ExecuteCommand` | 要素にバインドされたICommandを実行 |
 

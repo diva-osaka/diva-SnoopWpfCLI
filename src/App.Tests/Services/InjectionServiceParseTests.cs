@@ -409,4 +409,94 @@ public class InjectionServiceParseTests
         Assert.False(resultDict.ContainsKey("success"));
         Assert.False(resultDict.ContainsKey("message"));
     }
+
+    // --- FindElement binding parsing ---
+
+    [Fact]
+    public void ParseFindElementResponse_Success_WithBindings()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "message": "Found 1 matching element(s)",
+            "matchCount": 1,
+            "elements": [
+                {
+                    "type": "System.Windows.Controls.TextBox",
+                    "hashCode": 33333,
+                    "name": "InputField",
+                    "content": null,
+                    "automationId": null,
+                    "bindings": [
+                        { "property": "Text", "path": "UserName" },
+                        { "property": "IsEnabled", "path": "CanEdit" }
+                    ]
+                }
+            ]
+        }
+        """;
+
+        var result = ResponseParser.ParseFindElementResponse(json, 1234);
+
+        Assert.True(result.Success);
+        Assert.Single(result.Elements);
+        Assert.NotNull(result.Elements[0].Bindings);
+        Assert.Equal(2, result.Elements[0].Bindings.Count);
+        Assert.Equal("Text", result.Elements[0].Bindings[0].Property);
+        Assert.Equal("UserName", result.Elements[0].Bindings[0].Path);
+        Assert.Equal("IsEnabled", result.Elements[0].Bindings[1].Property);
+        Assert.Equal("CanEdit", result.Elements[0].Bindings[1].Path);
+    }
+
+    [Fact]
+    public void ParseFindElementResponse_Success_WithoutBindings()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "matchCount": 1,
+            "elements": [
+                {
+                    "type": "System.Windows.Controls.Button",
+                    "hashCode": 44444,
+                    "name": "OkButton"
+                }
+            ]
+        }
+        """;
+
+        var result = ResponseParser.ParseFindElementResponse(json, 1234);
+
+        Assert.True(result.Success);
+        Assert.Single(result.Elements);
+        Assert.Null(result.Elements[0].Bindings);
+    }
+
+    [Fact]
+    public void ParseFindElementResponse_Success_WithNullBindings()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "matchCount": 1,
+            "elements": [
+                {
+                    "type": "System.Windows.Controls.Button",
+                    "hashCode": 55555,
+                    "name": "CancelButton",
+                    "bindings": null
+                }
+            ]
+        }
+        """;
+
+        var result = ResponseParser.ParseFindElementResponse(json, 1234);
+
+        Assert.True(result.Success);
+        Assert.Single(result.Elements);
+        Assert.Null(result.Elements[0].Bindings);
+    }
 }

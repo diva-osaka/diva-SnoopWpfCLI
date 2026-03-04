@@ -34,11 +34,17 @@ public static class GetTreeCommand
             Description = "Window index (use list-windows to find indices)"
         };
 
+        var detailOption = new Option<bool>("--detail")
+        {
+            Description = "Show binding details for each element"
+        };
+
         var command = new Command("get-tree", "Get the full visual tree");
         command.Options.Add(pidOption);
         command.Options.Add(formatOption);
         command.Options.Add(verboseOption);
         command.Options.Add(windowOption);
+        command.Options.Add(detailOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
@@ -46,16 +52,25 @@ public static class GetTreeCommand
             var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
             var windowIndex = parseResult.GetValue(windowOption);
+            var detail = parseResult.GetValue(detailOption);
             var service = new InjectionService(verbose);
 
             try
             {
+                if (detail && format != "tree")
+                {
+                    CommandHelpers.WriteError(
+                        new { success = false, processId = pid, error = "--detail can only be used with --format tree" },
+                        format);
+                    return ExitCodes.GeneralError;
+                }
+
                 var result = await service.GetVisualTreeAsync(pid, windowIndex);
 
                 if (format == "tree" && result.Success && !string.IsNullOrEmpty(result.VisualTreeJson))
                 {
                     using var doc = JsonDocument.Parse(result.VisualTreeJson);
-                    Console.WriteLine(TreeFormatter.FormatVisualTree(doc.RootElement));
+                    Console.WriteLine(TreeFormatter.FormatVisualTree(doc.RootElement, detail));
                 }
                 else
                 {

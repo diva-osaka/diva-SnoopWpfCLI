@@ -52,4 +52,23 @@ public class GetTreeCommandTests
         var result = root.Parse("get-tree");
         Assert.True(result.Errors.Count > 0);
     }
+
+    [Fact]
+    public void Command_HasDetailOption()
+    {
+        var command = GetTreeCommand.Create();
+        var detailOption = command.Options.FirstOrDefault(o => o.Name == "--detail");
+        Assert.NotNull(detailOption);
+    }
+
+    [Fact]
+    public void Parse_WithDetail_NoErrors()
+    {
+        var command = GetTreeCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("get-tree --pid 1234 --detail");
+        Assert.Equal(0, result.Errors.Count);
+    }
 }

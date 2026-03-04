@@ -89,10 +89,10 @@ public static class FindElementCommand
             {
                 if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(text)
                     && string.IsNullOrWhiteSpace(automationId) && string.IsNullOrWhiteSpace(type)
-                    && string.IsNullOrWhiteSpace(bindingPath))
+                    && string.IsNullOrWhiteSpace(bindingPath) && !interactiveOnly)
                 {
                     CommandHelpers.WriteError(
-                        new { success = false, processId = pid, error = "At least one search criterion (--name, --text, --automationid, --type, or --binding-path) is required" },
+                        new { success = false, processId = pid, error = "At least one search criterion (--name, --text, --automationid, --type, --binding-path) or --interactive-only is required" },
                         format);
                     return ExitCodes.GeneralError;
                 }

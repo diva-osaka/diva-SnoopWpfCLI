@@ -14,7 +14,7 @@ public static class TreeFormatter
         "Name", "Content", "Text", "Title", "Header", "Source", "CommandParameter"
     };
 
-    public static string FormatVisualTree(JsonElement element)
+    public static string FormatVisualTree(JsonElement element, bool detail = false)
     {
         if (element.ValueKind != JsonValueKind.Object)
         {
@@ -25,7 +25,7 @@ public static class TreeFormatter
         if (element.TryGetProperty("type", out _))
         {
             var sb = new StringBuilder();
-            FormatNode(sb, element, "", true);
+            FormatNode(sb, element, "", true, detail);
             return sb.ToString();
         }
 
@@ -41,7 +41,7 @@ public static class TreeFormatter
                 if (!first)
                     sb.Append('\n');
                 first = false;
-                FormatNode(sb, root, "", true);
+                FormatNode(sb, root, "", true, detail);
             }
             return sb.ToString();
         }
@@ -151,6 +151,27 @@ public static class TreeFormatter
                         sb.Append($" AutomationId=\"{automationId}\"");
                 }
 
+                // Show binding paths if present
+                if (elem.TryGetProperty("bindings", out var bindingsProp) && bindingsProp.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var binding in bindingsProp.EnumerateArray())
+                    {
+                        if (binding.ValueKind != JsonValueKind.Object)
+                            continue;
+
+                        var property = binding.TryGetProperty("property", out var propName)
+                            && propName.ValueKind == JsonValueKind.String
+                            ? propName.GetString()
+                            : null;
+                        var path = binding.TryGetProperty("path", out var pathVal)
+                            && pathVal.ValueKind == JsonValueKind.String
+                            ? pathVal.GetString()
+                            : null;
+                        if (!string.IsNullOrEmpty(property) && !string.IsNullOrEmpty(path))
+                            sb.Append($" {property}={{Binding: {path}}}");
+                    }
+                }
+
                 sb.Append('\n');
             }
         }
@@ -237,7 +258,7 @@ public static class TreeFormatter
         return sb.ToString();
     }
 
-    private static void FormatNode(StringBuilder sb, JsonElement node, string indent, bool isRoot)
+    private static void FormatNode(StringBuilder sb, JsonElement node, string indent, bool isRoot, bool detail = false)
     {
         // Build node display string
         var typeName = GetShortTypeName(node);
@@ -250,6 +271,17 @@ public static class TreeFormatter
         {
             sb.Append(' ');
             sb.Append(string.Join(" ", props));
+        }
+
+        // Show binding details when detail mode is enabled
+        if (detail)
+        {
+            var bindings = GetBindingProperties(node);
+            if (bindings.Count > 0)
+            {
+                sb.Append(' ');
+                sb.Append(string.Join(" ", bindings));
+            }
         }
 
         // Process children
@@ -269,7 +301,7 @@ public static class TreeFormatter
                 sb.Append(isLast ? "\u2514\u2500 " : "\u251c\u2500 ");
 
                 var childIndent = indent + (isLast ? "   " : "\u2502  ");
-                FormatNode(sb, childArray[i], childIndent, false);
+                FormatNode(sb, childArray[i], childIndent, false, detail);
             }
         }
     }
@@ -302,6 +334,35 @@ public static class TreeFormatter
                 if (!string.IsNullOrEmpty(value))
                 {
                     result.Add($"{prop.Name}=\"{value}\"");
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static List<string> GetBindingProperties(JsonElement node)
+    {
+        var result = new List<string>();
+
+        foreach (var prop in node.EnumerateObject())
+        {
+            // Skip known non-property fields
+            if (prop.Name is "type" or "hashCode" or "children" or "childCount"
+                or "properties" or "dataContextId" or "automationPeer" or "error")
+                continue;
+
+            // Check if value is a binding object
+            if (prop.Value.ValueKind == JsonValueKind.Object
+                && prop.Value.TryGetProperty("type", out var typeVal)
+                && typeVal.ValueKind == JsonValueKind.String
+                && typeVal.GetString() == "binding"
+                && prop.Value.TryGetProperty("path", out var pathVal))
+            {
+                var path = pathVal.ValueKind == JsonValueKind.String ? pathVal.GetString() : null;
+                if (!string.IsNullOrEmpty(path))
+                {
+                    result.Add($"{prop.Name}={{Binding: {path}}}");
                 }
             }
         }

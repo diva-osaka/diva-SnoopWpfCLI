@@ -99,4 +99,23 @@ public class GetSubtreeCommandTests
         var result = root.Parse("get-subtree --pid 1234 --binding-path DataContext.Name");
         Assert.Equal(0, result.Errors.Count);
     }
+
+    [Fact]
+    public void Command_HasDetailOption()
+    {
+        var command = GetSubtreeCommand.Create();
+        var detailOption = command.Options.FirstOrDefault(o => o.Name == "--detail");
+        Assert.NotNull(detailOption);
+    }
+
+    [Fact]
+    public void Parse_WithDetail_NoErrors()
+    {
+        var command = GetSubtreeCommand.Create();
+        var root = new RootCommand();
+        root.Subcommands.Add(command);
+
+        var result = root.Parse("get-subtree --pid 1234 --name MyPanel --detail");
+        Assert.Equal(0, result.Errors.Count);
+    }
 }
