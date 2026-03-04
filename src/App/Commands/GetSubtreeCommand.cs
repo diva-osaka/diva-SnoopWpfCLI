@@ -85,6 +85,13 @@ public static class GetSubtreeCommand
 
             try
             {
+                if (detail && format != "tree")
+                {
+                    var err = new { success = false, processId = pid, error = "--detail can only be used with --format tree" };
+                    CommandHelpers.WriteError(err, format);
+                    return ExitCodes.GeneralError;
+                }
+
                 // Mutual exclusion: --name, --text, --binding-path, --type/--hash
                 if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(text))
                 {

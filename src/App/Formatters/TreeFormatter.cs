@@ -156,6 +156,9 @@ public static class TreeFormatter
                 {
                     foreach (var binding in bindingsProp.EnumerateArray())
                     {
+                        if (binding.ValueKind != JsonValueKind.Object)
+                            continue;
+
                         var property = binding.TryGetProperty("property", out var propName)
                             && propName.ValueKind == JsonValueKind.String
                             ? propName.GetString()

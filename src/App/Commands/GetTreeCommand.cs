@@ -57,6 +57,14 @@ public static class GetTreeCommand
 
             try
             {
+                if (detail && format != "tree")
+                {
+                    CommandHelpers.WriteError(
+                        new { success = false, processId = pid, error = "--detail can only be used with --format tree" },
+                        format);
+                    return ExitCodes.GeneralError;
+                }
+
                 var result = await service.GetVisualTreeAsync(pid, windowIndex);
 
                 if (format == "tree" && result.Success && !string.IsNullOrEmpty(result.VisualTreeJson))
