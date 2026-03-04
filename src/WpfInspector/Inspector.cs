@@ -1761,13 +1761,30 @@ namespace SnoopWpfCLI.WpfInspector
                             var elementContent = GetElementContentText(element);
                             var elementAutoId = (element is UIElement ui) ? System.Windows.Automation.AutomationProperties.GetAutomationId(ui) : null;
 
+                            // Collect binding information
+                            var elementBindings = new List<object>();
+                            var dpProps = DependencyPropertyCache.GetDependencyProperties(element.GetType());
+                            foreach (var dp in dpProps)
+                            {
+                                try
+                                {
+                                    var be = BindingOperations.GetBindingExpression(element, dp);
+                                    if (be?.ParentBinding?.Path?.Path != null)
+                                    {
+                                        elementBindings.Add(new { property = dp.Name, path = be.ParentBinding.Path.Path });
+                                    }
+                                }
+                                catch { }
+                            }
+
                             matchingElements.Add(new
                             {
                                 type = elementTypeName,
                                 hashCode = element.GetHashCode(),
                                 name = elementName,
                                 content = elementContent,
-                                automationId = string.IsNullOrEmpty(elementAutoId) ? null : elementAutoId
+                                automationId = string.IsNullOrEmpty(elementAutoId) ? null : elementAutoId,
+                                bindings = elementBindings.Count > 0 ? (object)elementBindings : null
                             });
                         }
 

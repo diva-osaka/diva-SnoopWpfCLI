@@ -54,6 +54,11 @@ public static class GetSubtreeCommand
             Description = "Enable verbose output"
         };
 
+        var detailOption = new Option<bool>("--detail")
+        {
+            Description = "Show binding details for each element"
+        };
+
         var command = new Command("get-subtree", "Get a subtree by element hashcode");
         command.Options.Add(pidOption);
         command.Options.Add(typeOption);
@@ -63,6 +68,7 @@ public static class GetSubtreeCommand
         command.Options.Add(bindingPathOption);
         command.Options.Add(formatOption);
         command.Options.Add(verboseOption);
+        command.Options.Add(detailOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
@@ -74,6 +80,7 @@ public static class GetSubtreeCommand
             var bindingPath = parseResult.GetValue(bindingPathOption)?.Trim() is { Length: > 0 } bp ? bp : null;
             var format = parseResult.GetValue(formatOption);
             var verbose = parseResult.GetValue(verboseOption);
+            var detail = parseResult.GetValue(detailOption);
             var service = new InjectionService(verbose);
 
             try
@@ -213,7 +220,7 @@ public static class GetSubtreeCommand
                 if (format == "tree" && result.Success && !string.IsNullOrWhiteSpace(result.VisualTreeJson))
                 {
                     using var doc = JsonDocument.Parse(result.VisualTreeJson);
-                    Console.WriteLine(TreeFormatter.FormatVisualTree(doc.RootElement));
+                    Console.WriteLine(TreeFormatter.FormatVisualTree(doc.RootElement, detail));
                 }
                 else
                 {

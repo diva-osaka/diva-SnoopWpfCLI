@@ -789,4 +789,214 @@ public class TreeFormatterTests
 
         Assert.Equal("Failed: Access denied", result);
     }
+
+    // --- FormatFindElementResult binding display tests ---
+
+    [Fact]
+    public void FormatFindElementResult_WithBindings_ShowsBindingPaths()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "matchCount": 1,
+            "elements": [
+                {
+                    "type": "System.Windows.Controls.TextBox",
+                    "hashCode": 33333,
+                    "name": "InputField",
+                    "bindings": [
+                        { "property": "Text", "path": "UserName" }
+                    ]
+                }
+            ]
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatFindElementResult(element);
+
+        Assert.Contains("TextBox [#33333]", result);
+        Assert.Contains("Name=\"InputField\"", result);
+        Assert.Contains("Text={Binding: UserName}", result);
+    }
+
+    [Fact]
+    public void FormatFindElementResult_WithMultipleBindings_ShowsAllBindingPaths()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "matchCount": 1,
+            "elements": [
+                {
+                    "type": "System.Windows.Controls.TextBox",
+                    "hashCode": 44444,
+                    "bindings": [
+                        { "property": "Text", "path": "FirstName" },
+                        { "property": "IsEnabled", "path": "CanEdit" }
+                    ]
+                }
+            ]
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatFindElementResult(element);
+
+        Assert.Contains("Text={Binding: FirstName}", result);
+        Assert.Contains("IsEnabled={Binding: CanEdit}", result);
+    }
+
+    [Fact]
+    public void FormatFindElementResult_WithoutBindings_NoBindingDisplay()
+    {
+        var json = """
+        {
+            "success": true,
+            "processId": 1234,
+            "matchCount": 1,
+            "elements": [
+                {
+                    "type": "System.Windows.Controls.Button",
+                    "hashCode": 55555,
+                    "name": "OkButton",
+                    "content": "OK"
+                }
+            ]
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatFindElementResult(element);
+
+        Assert.Contains("Button [#55555]", result);
+        Assert.DoesNotContain("Binding", result);
+    }
+
+    // --- FormatVisualTree detail mode tests ---
+
+    [Fact]
+    public void FormatVisualTree_Detail_ShowsBindingProperties()
+    {
+        var json = """
+        {
+            "type": "System.Windows.Controls.TextBox",
+            "hashCode": 57362713,
+            "Name": "LidarIp",
+            "Text": {
+                "type": "binding",
+                "path": "LidarIp",
+                "mode": "TwoWay",
+                "source": "DataContext"
+            }
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatVisualTree(element, detail: true);
+
+        Assert.Contains("TextBox [#57362713]", result);
+        Assert.Contains("Text={Binding: LidarIp}", result);
+    }
+
+    [Fact]
+    public void FormatVisualTree_NoDetail_HidesBindingProperties()
+    {
+        var json = """
+        {
+            "type": "System.Windows.Controls.TextBox",
+            "hashCode": 57362713,
+            "Name": "LidarIp",
+            "Text": {
+                "type": "binding",
+                "path": "LidarIp",
+                "mode": "TwoWay"
+            }
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatVisualTree(element, detail: false);
+
+        Assert.Contains("TextBox [#57362713]", result);
+        Assert.DoesNotContain("Binding", result);
+    }
+
+    [Fact]
+    public void FormatVisualTree_Detail_MultipleBindings()
+    {
+        var json = """
+        {
+            "type": "System.Windows.Controls.TextBox",
+            "hashCode": 12345,
+            "Text": {
+                "type": "binding",
+                "path": "FirstName",
+                "mode": "TwoWay"
+            },
+            "IsEnabled": {
+                "type": "binding",
+                "path": "CanEdit",
+                "mode": "OneWay"
+            }
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatVisualTree(element, detail: true);
+
+        Assert.Contains("Text={Binding: FirstName}", result);
+        Assert.Contains("IsEnabled={Binding: CanEdit}", result);
+    }
+
+    [Fact]
+    public void FormatVisualTree_Detail_WithChildren_PassesDetailFlag()
+    {
+        var json = """
+        {
+            "type": "System.Windows.Controls.Grid",
+            "hashCode": 100,
+            "children": [
+                {
+                    "type": "System.Windows.Controls.TextBox",
+                    "hashCode": 200,
+                    "Text": {
+                        "type": "binding",
+                        "path": "UserName",
+                        "mode": "TwoWay"
+                    }
+                }
+            ]
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatVisualTree(element, detail: true);
+
+        Assert.Contains("Grid [#100]", result);
+        Assert.Contains("TextBox [#200]", result);
+        Assert.Contains("Text={Binding: UserName}", result);
+    }
+
+    [Fact]
+    public void FormatVisualTree_Detail_NonBindingPropertiesIgnored()
+    {
+        var json = """
+        {
+            "type": "System.Windows.Controls.Button",
+            "hashCode": 300,
+            "Content": "OK",
+            "IsEnabled": true,
+            "Width": 100
+        }
+        """;
+        var element = JsonDocument.Parse(json).RootElement;
+
+        var result = TreeFormatter.FormatVisualTree(element, detail: true);
+
+        Assert.Contains("Button [#300]", result);
+        Assert.DoesNotContain("Binding", result);
+    }
 }

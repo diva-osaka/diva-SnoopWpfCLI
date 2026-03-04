@@ -31,6 +31,23 @@ internal static class ResponseParser
                     Content = elem.TryGetProperty("content", out var c) ? c.GetString() : null,
                     AutomationId = elem.TryGetProperty("automationId", out var a) ? a.GetString() : null
                 };
+
+                // Parse bindings if present
+                if (elem.TryGetProperty("bindings", out var bindingsElement) && bindingsElement.ValueKind == JsonValueKind.Array)
+                {
+                    var bindings = new List<ElementBinding>();
+                    foreach (var bindingElem in bindingsElement.EnumerateArray())
+                    {
+                        bindings.Add(new ElementBinding
+                        {
+                            Property = bindingElem.TryGetProperty("property", out var p) ? p.GetString() ?? "" : "",
+                            Path = bindingElem.TryGetProperty("path", out var path) ? path.GetString() ?? "" : ""
+                        });
+                    }
+                    if (bindings.Count > 0)
+                        found.Bindings = bindings;
+                }
+
                 elements.Add(found);
             }
         }

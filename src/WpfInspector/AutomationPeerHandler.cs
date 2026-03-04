@@ -51,6 +51,9 @@ namespace SnoopWpfCLI.WpfInspector
         public const string Scroll_Scroll = "Scroll_Scroll";
         public const string Scroll_SetPosition = "Scroll_SetPosition";
 
+        // Selection Pattern
+        public const string Selection_GetItems = "Selection_GetItems";
+
         // Direct Element Actions (not automation pattern based)
         public const string ButtonBase_Click = "ButtonBase_Click";
         public const string ExecuteCommand = "ExecuteCommand";
@@ -159,7 +162,8 @@ namespace SnoopWpfCLI.WpfInspector
                     PatternInterface.Toggle,
                     PatternInterface.ExpandCollapse,
                     PatternInterface.RangeValue,
-                    PatternInterface.Scroll
+                    PatternInterface.Scroll,
+                    PatternInterface.Selection
                 };
 
                 foreach (var patternType in supportedPatternTypes)
@@ -209,6 +213,10 @@ namespace SnoopWpfCLI.WpfInspector
                                     supportedActions.Add(AutomationActions.Scroll_Status);
                                     supportedActions.Add(AutomationActions.Scroll_Scroll);
                                     supportedActions.Add(AutomationActions.Scroll_SetPosition);
+                                    break;
+
+                                case PatternInterface.Selection:
+                                    supportedActions.Add(AutomationActions.Selection_GetItems);
                                     break;
                             }
                         }
@@ -307,6 +315,9 @@ namespace SnoopWpfCLI.WpfInspector
                 AutomationActions.Scroll_Status => ExecuteScrollStatusAction(peer, element),
                 AutomationActions.Scroll_Scroll => ExecuteScrollScrollAction(peer, element, commandData),
                 AutomationActions.Scroll_SetPosition => ExecuteScrollSetPositionAction(peer, element, commandData),
+
+                // Selection Pattern
+                AutomationActions.Selection_GetItems => ExecuteSelectionGetItemsAction(peer, element),
 
                 // Direct Element Actions
                 AutomationActions.ButtonBase_Click => ExecuteButtonBaseClickAction(element),
@@ -666,6 +677,33 @@ namespace SnoopWpfCLI.WpfInspector
             catch (Exception ex)
             {
                 return new { success = false, error = $"Error with Scroll pattern: {ex.Message}" };
+            }
+        }
+
+        // Selection Pattern Actions
+        private static object ExecuteSelectionGetItemsAction(AutomationPeer peer, UIElement element)
+        {
+            try
+            {
+                if (element is not ItemsControl itemsControl)
+                    return new { success = false, error = $"{element.GetType().Name} is not an ItemsControl" };
+
+                var items = new List<object>();
+                for (int i = 0; i < itemsControl.Items.Count; i++)
+                {
+                    var item = itemsControl.Items[i];
+                    items.Add(new
+                    {
+                        index = i,
+                        text = item?.ToString() ?? "",
+                        isSelected = (element is Selector selector && selector.SelectedItem == item)
+                    });
+                }
+                return new { success = true, itemCount = items.Count, items };
+            }
+            catch (Exception ex)
+            {
+                return new { success = false, error = $"Error getting items: {ex.Message}" };
             }
         }
 

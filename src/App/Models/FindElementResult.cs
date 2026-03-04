@@ -40,4 +40,16 @@ public class FoundElement
 
     [JsonPropertyName("automationId")]
     public string? AutomationId { get; set; }
+
+    [JsonPropertyName("bindings")]
+    public List<ElementBinding>? Bindings { get; set; }
+}
+
+public class ElementBinding
+{
+    [JsonPropertyName("property")]
+    public string Property { get; set; } = string.Empty;
+
+    [JsonPropertyName("path")]
+    public string Path { get; set; } = string.Empty;
 }

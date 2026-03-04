@@ -41,13 +41,17 @@ snoopwpfcli find-element --pid <PID> --type System.Windows.Controls.Button --tex
 
 # Interactive controls only (Button, TextBox, CheckBox, etc.)
 snoopwpfcli find-element --pid <PID> --text "OK" --interactive-only
+
+# List all interactive controls (no search criteria needed)
+snoopwpfcli find-element --pid <PID> --interactive-only
 ```
 
 ### 3. Get Visual Tree
 
 ```bash
 snoopwpfcli get-tree --pid <PID> --format tree
-snoopwpfcli get-tree --pid <PID> --window 1          # specific window
+snoopwpfcli get-tree --pid <PID> --format tree --detail   # show binding details
+snoopwpfcli get-tree --pid <PID> --window 1               # specific window
 ```
 
 ### 4. Inspect Elements
@@ -87,6 +91,7 @@ Common actions:
 | `Value_Set` | Set text | `--params '{"value":"text"}'` |
 | `Value_Get` | Read text value | none |
 | `Toggle_Toggle` | Toggle checkbox | none |
+| `Selection_GetItems` | List ComboBox/ListBox items | none |
 | `SelectionItem_Select` | Select item | none |
 | `RangeValue_Set` | Set slider/progress | `--params '{"value":50}'` |
 | `ExpandCollapse_Toggle` | Expand/collapse | none |
